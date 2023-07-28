@@ -13,6 +13,7 @@ func main() {
 	textArea := tview.NewTextArea().
 		SetPlaceholder("Enter text here...")
 	textArea.SetTitle("Text Area").SetBorder(true)
+	textArea.SetWrap(false)
 	helpInfo := tview.NewTextView().
 		SetText(" Press F1 for help, press Ctrl-C to exit")
 	position := tview.NewTextView().
@@ -115,6 +116,7 @@ func main() {
 		}
 		if event.Key() == tcell.KeyCtrlSpace {
 			selectCurrentWord(textArea)
+			buildCurrentPath(textArea)
 			rowFrom, colFrom, _, colTo := textArea.GetCursor()
 			dropGrid.SetColumns(colFrom+1, colTo-colFrom, 0)
 			dropGrid.SetRows(rowFrom+1, 1, 0)
@@ -132,12 +134,17 @@ func main() {
 	}
 }
 
+func buildCurrentPath(textArea *tview.TextArea) {
+	//_, pos, _, _ := textArea.GetCursor()
+
+}
+
 func selectCurrentWord(textArea *tview.TextArea) {
 	txt := textArea.GetText()
 	end := len(txt)
 	start := 0
 	_, pos, _ := textArea.GetSelection()
-
+	// expand left
 	for i := pos; i > -1; i-- {
 		if i < len(txt) {
 			s := txt[i : i+1]
@@ -147,6 +154,7 @@ func selectCurrentWord(textArea *tview.TextArea) {
 			}
 		}
 	}
+	// expand right
 	for i := pos; i < len(txt); i++ {
 		s := txt[i : i+1]
 		if !isLetter(s) {
@@ -155,6 +163,48 @@ func selectCurrentWord(textArea *tview.TextArea) {
 		}
 	}
 	textArea.Select(start, end)
+}
+
+func getWordAtPos(txt string, x int, y int) (word string, x1 int, x2 int) {
+	n := 0
+	start := -1
+	end := 0
+	//  get the text at line y
+	for i := 0; i < len(txt); i++ {
+		if txt[i:i+1] == "\n" {
+			n++
+			if n == y {
+				start = i
+			}
+			if n == y+1 {
+				break
+			}
+		}
+		end = i
+	}
+	st := txt[start+1 : end+1]
+
+	// expand left
+	for i := x; i > -1; i-- {
+		if i < len(st) {
+			s := st[i : i+1]
+			if !isLetter(s) {
+				x1 = i + 1
+				break
+			}
+		}
+	}
+	// expand right
+	x2 = len(st)
+	for i := x; i < len(st); i++ {
+		s := st[i : i+1]
+		if !isLetter(s) {
+			x2 = i
+			break
+		}
+	}
+	word = st[x1:x2]
+	return
 }
 
 func isLetter(s string) bool {
