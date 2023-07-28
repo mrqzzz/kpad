@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"strings"
 )
 
 func main() {
@@ -115,8 +116,14 @@ func main() {
 
 		}
 		if event.Key() == tcell.KeyCtrlSpace {
-			selectCurrentWord(textArea)
-			buildCurrentPath(textArea)
+			txt := textArea.GetText()
+			_, selPos, _ := textArea.GetSelection()
+			selStart, selEnd := getCurrentWordSelection(txt, selPos)
+			textArea.Select(selStart, selEnd)
+
+			_, _, y, x := textArea.GetCursor()
+			buildCurrentPath(txt, x, y)
+
 			rowFrom, colFrom, _, colTo := textArea.GetCursor()
 			dropGrid.SetColumns(colFrom+1, colTo-colFrom, 0)
 			dropGrid.SetRows(rowFrom+1, 1, 0)
@@ -134,41 +141,53 @@ func main() {
 	}
 }
 
-func buildCurrentPath(textArea *tview.TextArea) {
-	//_, pos, _, _ := textArea.GetCursor()
-
+func buildCurrentPath(txt string, x int, y int) string {
+	var path []string
+	for i := y - 1; i > 0; i-- {
+		st, x1, _ := getLeftmostWordAtLine(txt, i)
+		if x1 < x && st != "" {
+			if st[len(st)-1:] == ":" {
+				st = st[:len(st)-1]
+			}
+			path = append([]string{st}, path...)
+			x = x1
+		}
+	}
+	result := strings.Join(path, ".")
+	return result
 }
 
-func selectCurrentWord(textArea *tview.TextArea) {
-	txt := textArea.GetText()
-	end := len(txt)
-	start := 0
-	_, pos, _ := textArea.GetSelection()
+func getCurrentWordSelection(txt string, selPos int) (selStart int, selEnd int) {
+	selStart = len(txt)
+	selEnd = 0
 	// expand left
-	for i := pos; i > -1; i-- {
+	for i := selPos; i > -1; i-- {
 		if i < len(txt) {
 			s := txt[i : i+1]
 			if !isLetter(s) {
-				start = i + 1
+				selStart = i + 1
 				break
 			}
 		}
 	}
 	// expand right
-	for i := pos; i < len(txt); i++ {
+	for i := selPos; i < len(txt); i++ {
 		s := txt[i : i+1]
 		if !isLetter(s) {
-			end = i
+			selEnd = i
 			break
 		}
 	}
-	textArea.Select(start, end)
+	return
 }
 
-func getWordAtPos(txt string, x int, y int) (word string, x1 int, x2 int) {
+func getLeftmostWordAtLine(txt string, y int) (word string, x1 int, x2 int) {
 	n := 0
 	start := -1
 	end := 0
+	if y < 0 {
+		return "", 0, 0
+	}
 	//  get the text at line y
 	for i := 0; i < len(txt); i++ {
 		if txt[i:i+1] == "\n" {
@@ -184,19 +203,22 @@ func getWordAtPos(txt string, x int, y int) (word string, x1 int, x2 int) {
 	}
 	st := txt[start+1 : end+1]
 
-	// expand left
-	for i := x; i > -1; i-- {
-		if i < len(st) {
-			s := st[i : i+1]
-			if !isLetter(s) {
-				x1 = i + 1
-				break
+	// find the start of the word
+	for i := 0; i < len(st); i++ {
+		s := st[i : i+1]
+		if isLetter(s) {
+
+			if s == "-" {
+				continue
 			}
+
+			x1 = i
+			break
 		}
 	}
-	// expand right
+	// find the end of the word
 	x2 = len(st)
-	for i := x; i < len(st); i++ {
+	for i := x1; i < len(st); i++ {
 		s := st[i : i+1]
 		if !isLetter(s) {
 			x2 = i
