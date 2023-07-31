@@ -164,7 +164,7 @@ func populateDropdown(drop *tview.DropDown, root *Node) {
 
 func buildCurrentPath(txt string, x int, y int) string {
 	var path []string
-	for i := y - 1; i > 0; i-- {
+	for i := y - 1; i >= 0; i-- {
 		st, x1, _ := getLeftmostWordAtLine(txt, i)
 		if x1 < x && st != "" {
 			if st[len(st)-1:] == ":" {
@@ -198,6 +198,9 @@ func getCurrentWordSelection(txt string, selPos int) (selStart int, selEnd int) 
 			selEnd = i
 			break
 		}
+	}
+	if selEnd < selStart {
+		selEnd = selStart
 	}
 	return
 }
