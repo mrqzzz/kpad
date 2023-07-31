@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"golang.design/x/clipboard"
 	"strings"
 )
 
 func main() {
+	err := clipboard.Init()
+	if err != nil {
+		panic(err)
+	}
 	app := tview.NewApplication()
 
 	textArea := tview.NewTextArea().
@@ -98,6 +103,12 @@ func main() {
 	pages.AddAndSwitchToPage("main", mainView, true)
 	pages.AddPage("dropdown", dropGrid, true, false)
 
+	// CTRL+V fast paste
+	textArea.SetClipboard(nil, func() string {
+		buf := clipboard.Read(clipboard.FmtText)
+		return string(buf)
+	})
+
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if dropGrid.HasFocus() {
 			if event.Key() == tcell.KeyEscape {
@@ -114,33 +125,41 @@ func main() {
 				return tcell.NewEventKey(tcell.KeyEnter, 13, tcell.ModNone)
 			}
 
-		}
-		if event.Key() == tcell.KeyCtrlSpace {
+		} else if textArea.HasFocus() {
 			txt := textArea.GetText()
 			_, selPos, _ := textArea.GetSelection()
 			selStart, selEnd := getCurrentWordSelection(txt, selPos)
-			textArea.Select(selStart, selEnd)
+			if event.Key() == tcell.KeyCtrlSpace {
+				textArea.Select(selStart, selEnd)
 
-			_, x, y, _ := textArea.GetCursor()
-			path := buildCurrentPath(txt, x, y)
+				_, x, y, _ := textArea.GetCursor()
+				path := buildCurrentPath(txt, x, y)
 
-			// populate the dropdown
-			bytes, err := ExecExplain(path)
-			if err != nil {
-				panic(err)
+				// populate the dropdown
+				bytes, err := ExecExplain(path)
+				if err != nil {
+					panic(err)
+				}
+				root := BuildExplainFieldsTree(bytes)
+				populateDropdown(drop, root)
+
+				// position the dropdown
+				rowFrom, colFrom, _, colTo := textArea.GetCursor()
+				dropGrid.SetColumns(colFrom+1, colTo-colFrom, 0)
+				dropGrid.SetRows(rowFrom+1, 1, 0)
+				//drop.SetCurrentOption(0)
+
+				pages.ShowPage("dropdown")
+				app.QueueEvent(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+				return nil
+			} else if event.Key() == tcell.KeyTab {
+				app.QueueEvent(tcell.NewEventKey(tcell.KeyRune, 32, tcell.ModNone))
+				app.QueueEvent(tcell.NewEventKey(tcell.KeyRune, 32, tcell.ModNone))
+				return nil
+			} else if event.Key() == tcell.KeyDown {
+
 			}
-			root := BuildExplainFieldsTree(bytes)
-			populateDropdown(drop, root)
 
-			// position the dropdown
-			rowFrom, colFrom, _, colTo := textArea.GetCursor()
-			dropGrid.SetColumns(colFrom+1, colTo-colFrom, 0)
-			dropGrid.SetRows(rowFrom+1, 1, 0)
-			//drop.SetCurrentOption(0)
-
-			pages.ShowPage("dropdown")
-			app.QueueEvent(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-			return nil
 		}
 		return event
 	})
@@ -179,25 +198,25 @@ func buildCurrentPath(txt string, x int, y int) string {
 }
 
 func getCurrentWordSelection(txt string, selPos int) (selStart int, selEnd int) {
-
-	if selPos < len(txt) && selPos > 0 && txt[selPos:selPos+1] == "\n" {
-		selPos--
-	}
-
+	//if selPos < len(txt) && selPos > 0 && txt[selPos:selPos+1] == "\n" {
+	//	selPos--
+	//}
 	selStart = len(txt) - 1
 	selEnd = selStart + 1
+
 	// expand left
 	for i := selPos; i > -1; i-- {
 		if i < len(txt) {
 			s := txt[i : i+1]
-			if !isLetter(s) || i == 0 {
+			if !isLetter(s) {
 				selStart = i
 				if i != selPos {
 					selStart++
 				}
-				if i == 0 {
-					selStart--
-				}
+				break
+			}
+			if i == 0 {
+				selStart--
 				break
 			}
 		}
@@ -213,7 +232,6 @@ func getCurrentWordSelection(txt string, selPos int) (selStart int, selEnd int) 
 	if selEnd < selStart {
 		selEnd = selStart
 	}
-	//selEnd++
 	return
 }
 
