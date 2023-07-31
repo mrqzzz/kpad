@@ -14,7 +14,7 @@ type Node struct {
 }
 
 func ExecExplain(path string) ([]byte, error) {
-	args := []string{"explain", "--recursive", path}
+	args := []string{"explain", "--recursive", "deployment." + path}
 	out, err := exec.Command("kubectl", args...).Output()
 	return out, err
 }

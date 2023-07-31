@@ -122,12 +122,22 @@ func main() {
 			textArea.Select(selStart, selEnd)
 
 			_, _, y, x := textArea.GetCursor()
-			buildCurrentPath(txt, x, y)
+			path := buildCurrentPath(txt, x, y)
 
+			// populate the dropdown
+			bytes, err := ExecExplain(path)
+			if err != nil {
+				panic(err)
+			}
+			root := BuildExplainFieldsTree(bytes)
+			populateDropdown(drop, root)
+
+			// position the dropdown
 			rowFrom, colFrom, _, colTo := textArea.GetCursor()
 			dropGrid.SetColumns(colFrom+1, colTo-colFrom, 0)
 			dropGrid.SetRows(rowFrom+1, 1, 0)
 			//drop.SetCurrentOption(0)
+
 			pages.ShowPage("dropdown")
 			app.QueueEvent(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 			return nil
@@ -139,6 +149,17 @@ func main() {
 		true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
+}
+
+func populateDropdown(drop *tview.DropDown, root *Node) {
+	items := []string{}
+	if root != nil {
+		for _, child := range root.Children {
+			items = append(items, child.FieldName+"   "+child.FieldType)
+		}
+
+	}
+	drop.SetOptions(items, nil)
 }
 
 func buildCurrentPath(txt string, x int, y int) string {
