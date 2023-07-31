@@ -121,7 +121,9 @@ func main() {
 			selStart, selEnd := getCurrentWordSelection(txt, selPos)
 			textArea.Select(selStart, selEnd)
 
-			_, _, y, x := textArea.GetCursor()
+			return event
+
+			_, x, y, _ := textArea.GetCursor()
 			path := buildCurrentPath(txt, x, y)
 
 			// populate the dropdown
@@ -179,14 +181,22 @@ func buildCurrentPath(txt string, x int, y int) string {
 }
 
 func getCurrentWordSelection(txt string, selPos int) (selStart int, selEnd int) {
-	selStart = len(txt)
-	selEnd = 0
+
+	if selPos < len(txt) && selPos > 0 && txt[selPos:selPos+1] == "\n" {
+		selPos--
+	}
+
+	selStart = len(txt) - 1
+	selEnd = selStart + 1
 	// expand left
 	for i := selPos; i > -1; i-- {
 		if i < len(txt) {
 			s := txt[i : i+1]
 			if !isLetter(s) {
-				selStart = i + 1
+				selStart = i
+				if s != "\n" {
+					selStart++
+				}
 				break
 			}
 		}
@@ -202,6 +212,7 @@ func getCurrentWordSelection(txt string, selPos int) (selStart int, selEnd int) 
 	if selEnd < selStart {
 		selEnd = selStart
 	}
+	//selEnd++
 	return
 }
 
