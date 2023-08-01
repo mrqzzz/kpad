@@ -4,16 +4,12 @@ package main
 import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
-	"golang.design/x/clipboard"
+	"github.com/mrqzzz/tview"
 	"strings"
 )
 
 func main() {
-	err := clipboard.Init()
-	if err != nil {
-		panic(err)
-	}
+
 	app := tview.NewApplication()
 
 	textArea := tview.NewTextArea().
@@ -104,10 +100,10 @@ func main() {
 	pages.AddPage("dropdown", dropGrid, true, false)
 
 	// CTRL+V fast paste
-	textArea.SetClipboard(nil, func() string {
-		buf := clipboard.Read(clipboard.FmtText)
-		return string(buf)
-	})
+	//textArea.SetClipboard(nil, func() string {
+	//	buf := clipboard.Read(clipboard.FmtText)
+	//	return string(buf)
+	//})
 
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if dropGrid.HasFocus() {
