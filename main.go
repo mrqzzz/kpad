@@ -105,27 +105,30 @@ func main() {
 	//	return string(buf)
 	//})
 
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if dropGrid.HasFocus() {
-			if event.Key() == tcell.KeyEscape {
+	dropGrid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			pages.SwitchToPage("main")
+		}
+		if event.Key() == tcell.KeyTab || event.Key() == tcell.KeyEnter {
+			go func() {
+				_, option := drop.GetCurrentOption()
+				_, start, end := textArea.GetSelection()
+				textArea.Replace(start, end, option)
 				pages.SwitchToPage("main")
-			}
-			if event.Key() == tcell.KeyTab || event.Key() == tcell.KeyEnter {
-				go func() {
-					_, option := drop.GetCurrentOption()
-					_, start, end := textArea.GetSelection()
-					textArea.Replace(start, end, option)
-					pages.SwitchToPage("main")
-					app.Draw()
-				}()
-				return tcell.NewEventKey(tcell.KeyEnter, 13, tcell.ModNone)
-			}
+				app.Draw()
+			}()
+			return tcell.NewEventKey(tcell.KeyEnter, 13, tcell.ModNone)
+		}
+		return event
+	})
 
-		} else if textArea.HasFocus() {
+	textArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyCtrlSpace || event.Key() == tcell.KeyTab {
+
 			txt := textArea.GetText()
-			_, selPos, _ := textArea.GetSelection()
-			selStart, selEnd := getCurrentWordSelection(txt, selPos)
 			if event.Key() == tcell.KeyCtrlSpace {
+				_, selPos, _ := textArea.GetSelection()
+				selStart, selEnd := getCurrentWordSelection(txt, selPos)
 				textArea.Select(selStart, selEnd)
 
 				_, x, y, _ := textArea.GetCursor()
@@ -149,11 +152,11 @@ func main() {
 				app.QueueEvent(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 				return nil
 			} else if event.Key() == tcell.KeyTab {
-				app.QueueEvent(tcell.NewEventKey(tcell.KeyRune, 32, tcell.ModNone))
-				app.QueueEvent(tcell.NewEventKey(tcell.KeyRune, 32, tcell.ModNone))
+				_, selStart, selEnd := textArea.GetSelection()
+				textArea.Replace(selStart, selEnd, "  ")
+				//app.QueueEvent(tcell.NewEventKey(tcell.KeyRune, 32, tcell.ModNone))
+				//app.QueueEvent(tcell.NewEventKey(tcell.KeyRune, 32, tcell.ModNone))
 				return nil
-			} else if event.Key() == tcell.KeyDown {
-
 			}
 
 		}
