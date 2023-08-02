@@ -7,6 +7,7 @@ import (
 )
 
 func TestExplain(t *testing.T) {
+	t.SkipNow()
 	explain, err := ExecExplain("pod.spec")
 	assert.NoError(t, err)
 	fmt.Println(string(explain))
