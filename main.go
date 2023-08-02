@@ -9,12 +9,13 @@ import (
 )
 
 func main() {
+	errMsg := ""
 
 	app := tview.NewApplication()
 
-	textArea := tview.NewTextArea().
-		SetPlaceholder("Enter text here...")
-	textArea.SetTitle("Text Area").SetBorder(true)
+	textArea := tview.NewTextArea()
+	textArea.SetPlaceholder(" ")
+	textArea.SetTitle("Text Area").SetBorder(false)
 	textArea.SetWrap(false)
 	helpInfo := tview.NewTextView().
 		SetText(" Press F1 for help, press Ctrl-C to exit")
@@ -24,11 +25,17 @@ func main() {
 	pages := tview.NewPages()
 
 	updateInfos := func() {
-		fromRow, fromColumn, toRow, toColumn := textArea.GetCursor()
-		if fromRow == toRow && fromColumn == toColumn {
-			position.SetText(fmt.Sprintf("Row: [yellow]%d[white], Column: [yellow]%d ", fromRow, fromColumn))
+		if errMsg != "" {
+			position.SetText(errMsg)
+			errMsg = ""
 		} else {
-			position.SetText(fmt.Sprintf("[red]From[white] Row: [yellow]%d[white], Column: [yellow]%d[white] - [red]To[white] Row: [yellow]%d[white], To Column: [yellow]%d ", fromRow, fromColumn, toRow, toColumn))
+			fromRow, fromColumn, toRow, toColumn := textArea.GetCursor()
+			if fromRow == toRow && fromColumn == toColumn {
+				position.SetText(fmt.Sprintf("Row: [yellow]%d[white], Column: [yellow]%d ", fromRow, fromColumn))
+			} else {
+				position.SetText(fmt.Sprintf("[red]From[white] Row: [yellow]%d[white], Column: [yellow]%d[white] - [red]To[white] Row: [yellow]%d[white], To Column: [yellow]%d ", fromRow, fromColumn, toRow, toColumn))
+			}
+
 		}
 	}
 
@@ -171,7 +178,8 @@ Double-click to select a word.
 				// populate the dropdown
 				bytes, err := ExecExplain(path)
 				if err != nil {
-					panic(err)
+					errMsg = err.Error()
+					updateInfos()
 				}
 				root := BuildExplainFieldsTree(bytes)
 				populateDropdown(drop, root)
