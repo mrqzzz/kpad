@@ -5,11 +5,24 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mrqzzz/tview"
+	"golang.design/x/clipboard"
+	"net/http"
+	_ "net/http/pprof"
 	"strings"
 )
 
 func main() {
 	errMsg := ""
+
+	// PPROF:
+	go func() {
+		http.ListenAndServe(":8989", nil)
+	}()
+
+	err := clipboard.Init()
+	if err != nil {
+		panic(err)
+	}
 
 	app := tview.NewApplication()
 
@@ -141,10 +154,17 @@ Double-click to select a word.
 	})
 
 	// CTRL+V fast paste
-	//textArea.SetClipboard(nil, func() string {
-	//	buf := clipboard.Read(clipboard.FmtText)
-	//	return string(buf)
-	//})
+	textArea.SetClipboard(
+		func(s string) {
+			// Put in Clipboard
+			selText, _, _ := textArea.GetSelection()
+			clipboard.Write(clipboard.FmtText, []byte(selText))
+		},
+		func() string {
+			// Get from Clipboard
+			buf := clipboard.Read(clipboard.FmtText)
+			return string(buf)
+		})
 
 	dropGrid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
@@ -164,8 +184,8 @@ Double-click to select a word.
 	})
 
 	textArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyCtrlSpace || event.Key() == tcell.KeyTab {
 
+		if event.Key() == tcell.KeyCtrlSpace || event.Key() == tcell.KeyTab {
 			txt := textArea.GetText()
 			if event.Key() == tcell.KeyCtrlSpace {
 				_, selPos, _ := textArea.GetSelection()
