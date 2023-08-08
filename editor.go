@@ -61,8 +61,13 @@ func (e *Editor) Edit(txt string) error {
 
 			st := e.Buf[n][:w]
 			l := len(st)
+			// don't print the final \n on the last screen line
 			if len(st) > 0 && st[l-1] == '\n' && n == e.Top+e.ScreenHeight-1 {
 				st = st[:l-1]
+			}
+
+			if st == "\n" {
+				st = ".\n"
 			}
 
 			tm.Print(st)
@@ -86,12 +91,16 @@ func (e *Editor) Edit(txt string) error {
 		} else if key.Code == keys.CtrlC {
 			return true, nil // Stop listener by returning true on Ctrl+C
 		} else if key.Code == keys.Down {
-			if e.Y >= e.ScreenHeight && e.Top < len(e.Buf)-e.ScreenHeight-1 {
+			if e.Y >= e.ScreenHeight && e.Top < len(e.Buf)-e.ScreenHeight {
 				// scroll up inserting the bottom line
 				e.Top++
 				fmt.Fprintf(tm.Screen, "\033[1S")
 				tm.MoveCursor(1, e.ScreenHeight)
 				st := e.Buf[e.Top+e.ScreenHeight-1]
+				if st == "\n" {
+					st = ".\n"
+				}
+
 				l := len(st)
 				if len(st) > 0 && st[l-1] == '\n' {
 					st = st[:l-1]
@@ -134,15 +143,11 @@ func (e *Editor) Edit(txt string) error {
 			tm.Flush()
 		} else {
 			// EDIT
-			inserted := e.InsertAtCursor(string(key.Runes), e.X-1, e.Y+e.Top-1)
-			if inserted {
-				e.X++
-				if e.X >= e.ScreenWidth {
-					e.Y++
-					e.X = 1
-				}
+			if key.Code == keys.Enter {
+				key.Runes = []rune{'\n'}
 			}
-			//fmt.Fprint(tm.Screen, key.String())
+			e.InsertAtCursor(string(key.Runes), e.X-1, e.Y+e.Top-1)
+			e.AdvanceCursor(len(key.Runes))
 			draw()
 			tm.Flush()
 		}
@@ -152,15 +157,22 @@ func (e *Editor) Edit(txt string) error {
 	return nil
 }
 
-func (e *Editor) InsertAtCursor(ins string, col int, row int) bool {
+func (e *Editor) InsertAtCursor(ins string, col int, row int) {
 	if row >= len(e.Buf) {
 		e.Buf = append(e.Buf, "")
 	}
+
 	//if col >= len(e.Buf[row]) {
-	//	return false
+	//	col = len(e.Buf[row]) - 1
 	//}
 
-	st := e.Buf[row][:col] + ins + e.Buf[row][col:]
+	var st string
+	if len(e.Buf[row]) == 0 {
+		st = ins
+	} else {
+		st = e.Buf[row][:col] + ins + e.Buf[row][col:]
+
+	}
 
 	p := strings.Index(st, "\n")
 	if p == -1 || p == len(st)-1 {
@@ -178,5 +190,23 @@ func (e *Editor) InsertAtCursor(ins string, col int, row int) bool {
 		e.Buf[row] = st[:p]
 		e.InsertAtCursor(st[p:], 0, row+1)
 	}
-	return true
+}
+
+func (e *Editor) AdvanceCursor(n int) {
+	col := e.X - 1
+	row := e.Y + e.Top - 1
+	for i := 0; i < n; i++ {
+		col++
+		if col >= len(e.Buf[row]) {
+			row++
+			col = 0
+		}
+		if row >= len(e.Buf) {
+			row = len(e.Buf)
+		}
+	}
+	e.X = col + 1
+	e.Y = row - e.Top + 1
+	tm.MoveCursor(e.X, e.Y)
+	tm.Flush()
 }

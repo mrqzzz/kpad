@@ -756,9 +756,18 @@ status:
   replicas: 1
   updatedReplicas: 1`
 
-	corporate = `asdasd
-123
-456`
+	corporate = `1
+2
+3
+4
+5
+6
+7
+8
+9
+0
+X
+`
 
 	e := &Editor{}
 	e.Edit(corporate)
