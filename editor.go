@@ -48,37 +48,7 @@ func (e *Editor) Edit(txt string) error {
 
 	tm.Clear() // Clear current screen
 
-	draw := func() {
-		tm.Clear()
-		tm.MoveCursor(1, 1)
-
-		for n := e.Top; n < e.Top+e.ScreenHeight; n++ {
-			if n >= len(e.Buf) {
-				continue
-			}
-			w := len(e.Buf[n])
-			//st := strings.ReplaceAll(e.Buf[n][:w], ":", tm.Color(":", tm.BLUE))
-
-			st := e.Buf[n][:w]
-			l := len(st)
-			// don't print the final \n on the last screen line
-			if len(st) > 0 && st[l-1] == '\n' && n == e.Top+e.ScreenHeight-1 {
-				st = st[:l-1]
-			}
-
-			if st == "\n" {
-				st = ".\n"
-			}
-
-			tm.Print(st)
-
-		}
-		tm.MoveCursor(e.X, e.Y)
-		tm.Flush() // Call it every time at the end of rendering
-
-	}
-
-	draw()
+	e.Draw()
 
 	keyboard.Listen(func(key keys.Key) (stop bool, err error) {
 
@@ -146,9 +116,9 @@ func (e *Editor) Edit(txt string) error {
 			if key.Code == keys.Enter {
 				key.Runes = []rune{'\n'}
 			}
-			e.InsertAtCursor(string(key.Runes), e.X-1, e.Y+e.Top-1)
-			e.AdvanceCursor(len(key.Runes))
-			draw()
+			insertedCount := e.InsertAtCursor(string(key.Runes), e.X-1, e.Y+e.Top-1)
+			e.AdvanceCursor(insertedCount)
+			e.Draw()
 			tm.Flush()
 		}
 
@@ -157,14 +127,43 @@ func (e *Editor) Edit(txt string) error {
 	return nil
 }
 
-func (e *Editor) InsertAtCursor(ins string, col int, row int) {
+func (e *Editor) Draw() {
+	tm.Clear()
+	tm.MoveCursor(1, 1)
+
+	for n := e.Top; n < e.Top+e.ScreenHeight; n++ {
+		if n >= len(e.Buf) {
+			continue
+		}
+
+		st := e.Buf[n]
+		//st := strings.ReplaceAll(e.Buf[n][:w], ":", tm.Color(":", tm.BLUE))
+
+		// don't print the final \n on the last screen line
+		l := len(st)
+		if len(st) > 0 && st[l-1] == '\n' && n == e.Top+e.ScreenHeight-1 {
+			st = st[:l-1]
+		}
+
+		//if st == "\n" {
+		//	st = ".\n"
+		//}
+
+		tm.Print(st)
+
+	}
+	tm.MoveCursor(e.X, e.Y)
+	tm.Flush()
+
+}
+
+func (e *Editor) InsertAtCursor(ins string, col int, row int) (insertedCount int) {
+
+	e.ReplaceBadChars(&ins)
+
 	if row >= len(e.Buf) {
 		e.Buf = append(e.Buf, "")
 	}
-
-	//if col >= len(e.Buf[row]) {
-	//	col = len(e.Buf[row]) - 1
-	//}
 
 	var st string
 	if len(e.Buf[row]) == 0 {
@@ -190,6 +189,7 @@ func (e *Editor) InsertAtCursor(ins string, col int, row int) {
 		e.Buf[row] = st[:p]
 		e.InsertAtCursor(st[p:], 0, row+1)
 	}
+	return len(ins)
 }
 
 func (e *Editor) AdvanceCursor(n int) {
@@ -205,8 +205,19 @@ func (e *Editor) AdvanceCursor(n int) {
 			row = len(e.Buf)
 		}
 	}
+
+	if row > e.Top+e.ScreenHeight-1 {
+		e.Top = row - e.ScreenHeight + 1
+		e.Draw()
+	}
+
 	e.X = col + 1
 	e.Y = row - e.Top + 1
 	tm.MoveCursor(e.X, e.Y)
 	tm.Flush()
+}
+
+func (e *Editor) ReplaceBadChars(st *string) {
+	*st = strings.ReplaceAll(*st, "\r", "\n")
+	*st = strings.ReplaceAll(*st, "\t", "  ")
 }
