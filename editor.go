@@ -116,9 +116,10 @@ func (e *Editor) Edit(txt string) error {
 		} else {
 			// EDIT
 			if key.Code == keys.Backspace {
-				withdraws := e.DeleteAt(e.X-1, e.Y+e.Top-1)
+				withdraws, _ := e.DeleteAt(e.X-1, e.Y+e.Top-1)
 				e.CursorWithdraw(withdraws)
 				e.MoveCursorSafe(e.X, e.Y)
+				//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
 				e.DrawAll()
 			}
 			if key.Code == keys.Enter {
@@ -167,18 +168,24 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 		}
 
 		st := e.Buf[n]
+
+		// COLORIZE
 		//st := strings.ReplaceAll(e.Buf[n][:w], ":", tm.Color(":", tm.BLUE))
 
-		// don't print the final \n on the last screen line
 		l := len(st)
+		st = strings.Replace(st, "\n", "", -1)
+		st = st + strings.Repeat(" ", e.ScreenWidth-l) + "\n"
+
+		//// don't print the final \n on the last screen line
+		l = len(st)
 		if len(st) > 0 && st[l-1] == '\n' && n == e.Top+e.ScreenHeight-1 {
 			st = st[:l-1]
 		}
-
-		// prevent visual issue where a \n line is not printed
-		if st == "\n" {
-			st = " \n"
-		}
+		//
+		//// prevent visual issue where a \n line is not printed
+		//if st == "\n" {
+		//	st = " \n"
+		//}
 
 		tm.Print(st)
 
@@ -225,7 +232,7 @@ func (e *Editor) InsertAt(ins string, col int, row int) (insertedCharCount int, 
 	return len(ins), rowsPushedDown
 }
 
-func (e *Editor) DeleteAt(col int, row int) (numWithdraws int) {
+func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int) {
 	if col == 0 {
 		if row > 0 {
 			row2 := e.findNextLineFeed(row)
@@ -238,14 +245,14 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int) {
 				e.Buf[row-1] = e.Buf[row-1][:len(e.Buf[row-1])-1]
 			}
 			numWithdraws = -min(len(st), e.ScreenWidth-len(e.Buf[row-1])) - 1
-			e.InsertAt(st, len(e.Buf[row-1]), row-1)
+			_, rowsToRedraw = e.InsertAt(st, len(e.Buf[row-1]), row-1)
 		}
 
 	} else {
 		// pull up
 		e.Buf[row] = e.Buf[row][:col-1] + e.Buf[row][col:]
 		for r := row; r < len(e.Buf); r++ {
-			if len(e.Buf[r]) > 0 && e.Buf[row][len(e.Buf[r])-1:] == "\n" {
+			if len(e.Buf[r]) > 0 && e.Buf[r][len(e.Buf[r])-1:] == "\n" {
 				break
 			}
 			if len(e.Buf)-1 > r {
@@ -253,8 +260,15 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int) {
 				if len(e.Buf[r+1]) > 0 {
 					e.Buf[r] += e.Buf[r+1][:1]
 					e.Buf[r+1] = e.Buf[r+1][1:]
+					if len(e.Buf[r+1]) == 0 {
+						// remove this row
+						e.Buf = append(e.Buf[:r+1], e.Buf[r+2:]...)
+						break
+
+					}
 				}
 			}
+			rowsToRedraw++
 		}
 		numWithdraws = -1
 	}
@@ -335,6 +349,9 @@ func (e *Editor) MoveCursorSafe(x int, y int) {
 	st := e.Buf[e.Top+y-1]
 	if x > len(st) {
 		x = len(st)
+	}
+	if x < 0 {
+		x = 0
 	}
 	e.X = x
 	e.Y = y
