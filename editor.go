@@ -16,7 +16,6 @@ type Editor struct {
 	X            int
 	Y            int
 	Top          int // first visible row index
-	Bottom       int // last visible row index
 	Wordwrap     bool
 }
 
@@ -77,13 +76,13 @@ func (e *Editor) Edit(txt string) error {
 					st = st[:l-1]
 				}
 				tm.Print(st)
-				tm.MoveCursor(e.X, e.Y)
+				e.MoveCursorSafe(e.X, e.Y)
 				tm.Flush()
 				//draw()
 			}
 			if e.Y < e.ScreenHeight {
 				e.Y++
-				tm.MoveCursor(e.X, e.Y)
+				e.MoveCursorSafe(e.X, e.Y)
 				tm.Flush()
 
 			}
@@ -95,43 +94,58 @@ func (e *Editor) Edit(txt string) error {
 				fmt.Fprintf(tm.Screen, "\033[1T")
 				tm.MoveCursor(1, 1)
 				tm.Print(e.Buf[e.Top])
-				tm.MoveCursor(e.X, e.Y)
+				e.MoveCursorSafe(e.X, e.Y)
 				tm.Flush()
 				//draw()
 			}
 			if e.Y > 1 {
 				e.Y--
-				tm.MoveCursor(e.X, e.Y)
+				e.MoveCursorSafe(e.X, e.Y)
 				tm.Flush()
 			}
-		} else if key.Code == keys.Left && e.X > 1 {
-			e.X--
-			tm.MoveCursor(e.X, e.Y)
+		} else if key.Code == keys.Left {
+			e.CursorWithdraw(-1)
+			e.MoveCursorSafe(e.X, e.Y)
+			//e.MoveCursorSafe(e.X, e.Y)
 			tm.Flush()
-		} else if key.Code == keys.Right && e.X < e.ScreenWidth {
-			e.X++
-			tm.MoveCursor(e.X, e.Y)
+		} else if key.Code == keys.Right {
+			e.CursorAdvance(1)
+			e.MoveCursorSafe(e.X, e.Y)
+			//e.MoveCursorSafe(e.X, e.Y)
 			tm.Flush()
 		} else {
 			// EDIT
+			if key.Code == keys.Backspace {
+				withdraws := e.DeleteAt(e.X-1, e.Y+e.Top-1)
+				e.CursorWithdraw(withdraws)
+				e.MoveCursorSafe(e.X, e.Y)
+				e.DrawAll()
+			}
 			if key.Code == keys.Enter {
 				key.Runes = []rune{'\n'}
 			}
-			oldY := e.Y
-			insertedCharCount, rowsPushedDown := e.InsertAtCursor(string(key.Runes), e.X-1, e.Y+e.Top-1)
-			e.AdvanceCursor(insertedCharCount)
-			if e.Y == oldY {
-				toIdx := e.findNextLineFeed(e.Top + e.Y - 1)
-				if rowsPushedDown-1 > (toIdx - e.Top + e.Y - 1) {
-					e.DrawAll()
-				} else {
-					e.DrawRows(e.Top+e.Y-1, min(e.Top+e.Y-1+rowsPushedDown, e.Top+e.ScreenHeight-1))
-				}
 
-			} else {
-				e.DrawAll()
+			if len(key.Runes) > 0 {
+				// ADD TEXT
+				oldY := e.Y
+				insertedCharCount, rowsPushedDown := e.InsertAt(string(key.Runes), e.X-1, e.Y+e.Top-1)
+				e.CursorAdvance(insertedCharCount)
+
+				// optimized partial redraw:
+				if e.Y == oldY {
+					toIdx := e.findNextLineFeed(e.Top + e.Y - 1)
+					if rowsPushedDown-1 > (toIdx - e.Top + e.Y - 1) {
+						e.DrawAll()
+					} else {
+						e.DrawRows(e.Top+e.Y-1, min(e.Top+e.Y-1+rowsPushedDown, e.Top+e.ScreenHeight-1))
+					}
+
+				} else {
+					e.DrawAll()
+				}
+				tm.Flush()
+
 			}
-			tm.Flush()
 		}
 
 		return false, nil // Return false to continue listening
@@ -174,7 +188,7 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 
 }
 
-func (e *Editor) InsertAtCursor(ins string, col int, row int) (insertedCharCount int, rowsPushedDown int) {
+func (e *Editor) InsertAt(ins string, col int, row int) (insertedCharCount int, rowsPushedDown int) {
 
 	rowsPushedDown = 1
 	e.ReplaceBadChars(&ins)
@@ -205,18 +219,54 @@ func (e *Editor) InsertAtCursor(ins string, col int, row int) (insertedCharCount
 		e.Buf[row] = st
 	} else {
 		e.Buf[row] = st[:p]
-		_, rPushed := e.InsertAtCursor(st[p:], 0, row+1)
+		_, rPushed := e.InsertAt(st[p:], 0, row+1)
 		rowsPushedDown += rPushed
 	}
 	return len(ins), rowsPushedDown
 }
 
-func (e *Editor) AdvanceCursor(n int) {
+func (e *Editor) DeleteAt(col int, row int) (numWithdraws int) {
+	if col == 0 {
+		if row > 0 {
+			row2 := e.findNextLineFeed(row)
+			// get the string from the cursor (at the beginning of line), down to the next \n:
+			st := strings.Join(e.Buf[row:row2+1], "")
+			// remove the block:
+			e.Buf = append(e.Buf[:row], e.Buf[row2+1:]...)
+			// insert the block at the end of the previous line (pull up)
+			if len(e.Buf[row-1]) > 0 {
+				e.Buf[row-1] = e.Buf[row-1][:len(e.Buf[row-1])-1]
+			}
+			numWithdraws = -min(len(st), e.ScreenWidth-len(e.Buf[row-1])) - 1
+			e.InsertAt(st, len(e.Buf[row-1]), row-1)
+		}
+
+	} else {
+		// pull up
+		e.Buf[row] = e.Buf[row][:col-1] + e.Buf[row][col:]
+		for r := row; r < len(e.Buf); r++ {
+			if len(e.Buf[r]) > 0 && e.Buf[row][len(e.Buf[r])-1:] == "\n" {
+				break
+			}
+			if len(e.Buf)-1 > r {
+				// pull up first char of next line
+				if len(e.Buf[r+1]) > 0 {
+					e.Buf[r] += e.Buf[r+1][:1]
+					e.Buf[r+1] = e.Buf[r+1][1:]
+				}
+			}
+		}
+		numWithdraws = -1
+	}
+	return
+}
+
+func (e *Editor) CursorAdvance(n int) {
 	col := e.X - 1
 	row := e.Y + e.Top - 1
 	for i := 0; i < n; i++ {
 		col++
-		if col >= len(e.Buf[row]) {
+		if col >= len(e.Buf[row]) && row < len(e.Buf)-1 {
 			row++
 			col = 0
 		}
@@ -236,11 +286,39 @@ func (e *Editor) AdvanceCursor(n int) {
 	//tm.Flush()
 }
 
+func (e *Editor) CursorWithdraw(n int) {
+	col := e.X - 1
+	row := e.Y + e.Top - 1
+	for i := 0; i > n; i-- {
+		col--
+		if col < 0 && row == 0 {
+			col = 0
+		}
+		if col < 0 {
+			row--
+			if row < 0 {
+				row = 0
+			}
+			col = len(e.Buf[row])
+		}
+	}
+
+	if row < e.Top {
+		e.Top = row
+		e.DrawAll()
+	}
+	e.X = col + 1
+	e.Y = row - e.Top + 1
+	//tm.MoveCursor(e.X, e.Y)
+	//tm.Flush()
+}
+
 func (e *Editor) ReplaceBadChars(st *string) {
 	*st = strings.ReplaceAll(*st, "\r", "\n")
 	*st = strings.ReplaceAll(*st, "\t", "  ")
 }
 
+// returns the first row index in Buf where a \n is found, starting from fromIndex, included.
 func (e *Editor) findNextLineFeed(fromIdx int) int {
 	for i := fromIdx; i < len(e.Buf); i++ {
 		if strings.Index(e.Buf[i], "\n") > -1 {
@@ -248,6 +326,19 @@ func (e *Editor) findNextLineFeed(fromIdx int) int {
 		}
 	}
 	return len(e.Buf) - 1
+}
+
+func (e *Editor) MoveCursorSafe(x int, y int) {
+	if y > len(e.Buf)-e.Top {
+		y = len(e.Buf) - e.Top
+	}
+	st := e.Buf[e.Top+y-1]
+	if x > len(st) {
+		x = len(st)
+	}
+	e.X = x
+	e.Y = y
+	tm.MoveCursor(e.X, e.Y)
 }
 
 func min(a int, b int) int {
