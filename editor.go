@@ -51,13 +51,7 @@ func (e *Editor) Edit(txt string) error {
 
 	keyboard.Listen(func(key keys.Key) (stop bool, err error) {
 
-		if key.Code == keys.CtrlShiftUp {
-			fmt.Fprintf(tm.Screen, "\033[1S")
-			tm.Flush()
-		} else if key.Code == keys.CtrlShiftDown {
-			fmt.Fprintf(tm.Screen, "\033[1T")
-			tm.Flush()
-		} else if key.Code == keys.CtrlC {
+		if key.Code == keys.CtrlC {
 			return true, nil // Stop listener by returning true on Ctrl+C
 		} else if key.Code == keys.Down {
 			if e.Y >= e.ScreenHeight && e.Top < len(e.Buf)-e.ScreenHeight {
@@ -125,6 +119,9 @@ func (e *Editor) Edit(txt string) error {
 			if key.Code == keys.Enter {
 				key.Runes = []rune{'\n'}
 			}
+			if key.Code == keys.Tab {
+				key.Runes = []rune{' ', ' '}
+			}
 
 			if len(key.Runes) > 0 {
 				// ADD TEXT
@@ -172,6 +169,7 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 		// COLORIZE
 		//st := strings.ReplaceAll(e.Buf[n][:w], ":", tm.Color(":", tm.BLUE))
 
+		// full padding on all printed lines
 		l := len(st)
 		st = strings.Replace(st, "\n", "", -1)
 		st = st + strings.Repeat(" ", e.ScreenWidth-l) + "\n"
@@ -181,11 +179,6 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 		if len(st) > 0 && st[l-1] == '\n' && n == e.Top+e.ScreenHeight-1 {
 			st = st[:l-1]
 		}
-		//
-		//// prevent visual issue where a \n line is not printed
-		//if st == "\n" {
-		//	st = " \n"
-		//}
 
 		tm.Print(st)
 
