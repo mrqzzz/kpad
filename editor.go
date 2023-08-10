@@ -123,8 +123,8 @@ func (e *Editor) Edit(txt string) error {
 				} else {
 					e.DrawAll()
 				}
+				e.MoveCursorSafe(e.X, e.Y)
 				tm.Flush()
-
 			}
 		}
 
@@ -167,9 +167,8 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 		tm.Print(string(runes))
 
 	}
-	tm.MoveCursor(e.X, e.Y)
+	e.MoveCursorSafe(e.X, e.Y)
 	tm.Flush()
-
 }
 
 func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, rowsPushedDown int) {
@@ -190,7 +189,6 @@ func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, 
 	if len(e.Buf[row]) == 0 {
 		st = runeCopy(ins)
 	} else {
-
 		st = runeCopyAppend(e.Buf[row][:col], ins)
 		st = runeCopyAppend(st, e.Buf[row][col:])
 
@@ -264,7 +262,7 @@ func (e *Editor) CursorAdvance(n int) {
 	col := e.X - 1
 	row := e.Y + e.Top - 1
 	for i := 0; i < n; i++ {
-		col++
+		col++ // += runeWidth(e.Buf[row][col])
 		if col >= len(e.Buf[row]) && row < len(e.Buf)-1 {
 			row++
 			col = 0
@@ -289,7 +287,7 @@ func (e *Editor) CursorWithdraw(n int) {
 	col := e.X - 1
 	row := e.Y + e.Top - 1
 	for i := 0; i > n; i-- {
-		col--
+		col-- // -= runeWidth(e.Buf[row][col])
 		if col < 0 && row == 0 {
 			col = 0
 		}
@@ -331,16 +329,16 @@ func (e *Editor) MoveCursorSafe(x int, y int) {
 	if y > len(e.Buf)-e.Top {
 		y = len(e.Buf) - e.Top
 	}
-	st := e.Buf[e.Top+y-1]
-	if x > len(st) {
-		x = len(st)
+	runes := e.Buf[e.Top+y-1]
+	if x > len(runes) {
+		x = len(runes)
 	}
 	if x < 0 {
 		x = 0
 	}
 	e.X = x
 	e.Y = y
-	tm.MoveCursor(e.X, e.Y)
+	tm.MoveCursor(e.X+runesWidth(runes[:e.X-1]), e.Y)
 }
 
 func min(a int, b int) int {
@@ -406,6 +404,21 @@ func runeCopyAppend(runes1 []rune, runes2 []rune) []rune {
 	for i := range runes2 {
 		res[idx] = runes2[i]
 		idx++
+	}
+	return res
+}
+
+func runeWidth(r rune) int {
+	if r > 255 {
+		return 2
+	}
+	return 1
+}
+
+func runesWidth(r []rune) int {
+	res := 0
+	for i := 0; i < len(r); i++ {
+		res += runeWidth(r[i]) - 1
 	}
 	return res
 }
