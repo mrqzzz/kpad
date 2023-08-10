@@ -10,7 +10,7 @@ import (
 )
 
 type Editor struct {
-	Buf          []string
+	Buf          [][]rune
 	ScreenWidth  int
 	ScreenHeight int
 	X            int
@@ -31,12 +31,12 @@ func (e *Editor) Edit(txt string) error {
 			break
 		}
 	}
-
-	e.Buf = []string{}
+	txtRune := []rune(txt)
+	e.Buf = [][]rune{}
 	p := 0
-	for i := 0; i < len(txt); i++ {
-		if (i-p+1)%(e.ScreenWidth-0) == 0 || txt[i] == '\n' || i == len(txt)-1 {
-			e.Buf = append(e.Buf, txt[p:i+1])
+	for i := 0; i < len(txtRune); i++ {
+		if (i-p+1)%(e.ScreenWidth-0) == 0 || txtRune[i] == '\n' || i == len(txtRune)-1 {
+			e.Buf = append(e.Buf, txtRune[p:i+1])
 			p = i + 1
 		}
 	}
@@ -58,39 +58,21 @@ func (e *Editor) Edit(txt string) error {
 				// scroll up inserting the bottom line
 				e.Top++
 				fmt.Fprintf(tm.Screen, "\033[1S")
-				tm.MoveCursor(1, e.ScreenHeight)
-				st := e.Buf[e.Top+e.ScreenHeight-1]
-
-				//if st == "\n" {
-				//	st = ".\n"
-				//}
-
-				l := len(st)
-				if len(st) > 0 && st[l-1] == '\n' {
-					st = st[:l-1]
-				}
-				tm.Print(st)
 				e.MoveCursorSafe(e.X, e.Y)
-				tm.Flush()
-				//draw()
+				e.DrawRows(e.Top+e.ScreenHeight-1, e.Top+e.ScreenHeight-1)
 			}
 			if e.Y < e.ScreenHeight {
 				e.Y++
 				e.MoveCursorSafe(e.X, e.Y)
 				tm.Flush()
-
 			}
-
 		} else if key.Code == keys.Up {
 			if e.Y == 1 && e.Top > 0 {
 				// scroll down inserting the top line
 				e.Top--
 				fmt.Fprintf(tm.Screen, "\033[1T")
-				tm.MoveCursor(1, 1)
-				tm.Print(e.Buf[e.Top])
 				e.MoveCursorSafe(e.X, e.Y)
-				tm.Flush()
-				//draw()
+				e.DrawRows(e.Top, e.Top)
 			}
 			if e.Y > 1 {
 				e.Y--
@@ -126,7 +108,7 @@ func (e *Editor) Edit(txt string) error {
 			if len(key.Runes) > 0 {
 				// ADD TEXT
 				oldY := e.Y
-				insertedCharCount, rowsPushedDown := e.InsertAt(string(key.Runes), e.X-1, e.Y+e.Top-1)
+				insertedCharCount, rowsPushedDown := e.InsertAt(key.Runes, e.X-1, e.Y+e.Top-1)
 				e.CursorAdvance(insertedCharCount)
 
 				// optimized partial redraw:
@@ -163,24 +145,26 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 		if n >= len(e.Buf) {
 			continue
 		}
-
-		st := e.Buf[n]
+		runes := runeRepeat(' ', e.ScreenWidth)
+		copy(runes, e.Buf[n])
 
 		// COLORIZE
-		//st := strings.ReplaceAll(e.Buf[n][:w], ":", tm.Color(":", tm.BLUE))
+		//runes := strings.ReplaceAll(e.Buf[n][:w], ":", tm.Color(":", tm.BLUE))
 
 		// full padding on all printed lines
-		l := len(st)
-		st = strings.Replace(st, "\n", "", -1)
-		st = st + strings.Repeat(" ", e.ScreenWidth-l) + "\n"
+		runeReplace(runes, '\n', ' ')
 
-		//// don't print the final \n on the last screen line
-		l = len(st)
-		if len(st) > 0 && st[l-1] == '\n' && n == e.Top+e.ScreenHeight-1 {
-			st = st[:l-1]
+		if n < e.Top+e.ScreenHeight-1 {
+			runes = append(runes, '\n')
 		}
 
-		tm.Print(st)
+		//// don't print the final \n on the last screen line
+		//l = len(runes)
+		//if len(runes) > 0 && runes[l-1] == '\n' && n == e.Top+e.ScreenHeight-1 {
+		//	runes = runes[:l-1]
+		//}
+
+		tm.Print(string(runes))
 
 	}
 	tm.MoveCursor(e.X, e.Y)
@@ -188,24 +172,32 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 
 }
 
-func (e *Editor) InsertAt(ins string, col int, row int) (insertedCharCount int, rowsPushedDown int) {
+func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, rowsPushedDown int) {
+
+	if len(ins) == 0 {
+		return 0, 0
+	}
 
 	rowsPushedDown = 1
-	e.ReplaceBadChars(&ins)
+	e.runeReplaceBadChars(ins)
+	//e.ReplaceBadChars(&ins)
 
 	if row >= len(e.Buf) {
-		e.Buf = append(e.Buf, "")
+		e.Buf = append(e.Buf, []rune{})
 	}
 
-	var st string
+	var st []rune
 	if len(e.Buf[row]) == 0 {
-		st = ins
+		st = runeCopy(ins)
 	} else {
-		st = e.Buf[row][:col] + ins + e.Buf[row][col:]
+
+		st = runeCopyAppend(e.Buf[row][:col], ins)
+		st = runeCopyAppend(st, e.Buf[row][col:])
 
 	}
 
-	p := strings.Index(st, "\n")
+	p := runeIndexOf(st, '\n')
+
 	if p == -1 || p == len(st)-1 {
 		p = e.ScreenWidth
 	} else {
@@ -218,7 +210,7 @@ func (e *Editor) InsertAt(ins string, col int, row int) (insertedCharCount int, 
 	if len(st) < p {
 		e.Buf[row] = st
 	} else {
-		e.Buf[row] = st[:p]
+		e.Buf[row] = runeCopy(st[:p])
 		_, rPushed := e.InsertAt(st[p:], 0, row+1)
 		rowsPushedDown += rPushed
 	}
@@ -230,7 +222,7 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 		if row > 0 {
 			row2 := e.findNextLineFeed(row)
 			// get the string from the cursor (at the beginning of line), down to the next \n:
-			st := strings.Join(e.Buf[row:row2+1], "")
+			st := runesJoin(e.Buf[row : row2+1])
 			// remove the block:
 			e.Buf = append(e.Buf[:row], e.Buf[row2+1:]...)
 			// insert the block at the end of the previous line (pull up)
@@ -243,15 +235,15 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 
 	} else {
 		// pull up
-		e.Buf[row] = e.Buf[row][:col-1] + e.Buf[row][col:]
+		e.Buf[row] = append(e.Buf[row][:col-1], e.Buf[row][col:]...)
 		for r := row; r < len(e.Buf); r++ {
-			if len(e.Buf[r]) > 0 && e.Buf[r][len(e.Buf[r])-1:] == "\n" {
+			if len(e.Buf[r]) > 0 && e.Buf[r][len(e.Buf[r])-1] == '\n' {
 				break
 			}
 			if len(e.Buf)-1 > r {
 				// pull up first char of next line
 				if len(e.Buf[r+1]) > 0 {
-					e.Buf[r] += e.Buf[r+1][:1]
+					e.Buf[r] = append(e.Buf[r], e.Buf[r+1][0])
 					e.Buf[r+1] = e.Buf[r+1][1:]
 					if len(e.Buf[r+1]) == 0 {
 						// remove this row
@@ -328,7 +320,7 @@ func (e *Editor) ReplaceBadChars(st *string) {
 // returns the first row index in Buf where a \n is found, starting from fromIndex, included.
 func (e *Editor) findNextLineFeed(fromIdx int) int {
 	for i := fromIdx; i < len(e.Buf); i++ {
-		if strings.Index(e.Buf[i], "\n") > -1 {
+		if runeIndexOf(e.Buf[i], '\n') > -1 {
 			return i
 		}
 	}
@@ -356,4 +348,64 @@ func min(a int, b int) int {
 		return a
 	}
 	return b
+}
+
+func runeReplace(r []rune, search int32, replace int32) {
+	for i := 0; i < len(r); i++ {
+		if r[i] == search {
+			r[i] = replace
+		}
+	}
+}
+
+func runeRepeat(char int32, count int) []rune {
+	res := make([]rune, count)
+	for i := 0; i < count; i++ {
+		res[i] = char
+	}
+	return res
+}
+
+func runeIndexOf(r []rune, char int32) int {
+	for i := 0; i < len(r); i++ {
+		if r[i] == char {
+			return i
+		}
+	}
+	return -1
+}
+
+func (e *Editor) runeReplaceBadChars(r []rune) {
+	runeReplace(r, '\r', '\n')
+	runeReplace(r, '\t', ' ')
+}
+
+func runesJoin(rows [][]rune) []rune {
+	var res []rune
+	for i := 0; i < len(rows); i++ {
+		res = append(res, rows[i]...)
+	}
+	return res
+}
+
+func runeCopy(from []rune) []rune {
+	res := make([]rune, len(from))
+	for i := range from {
+		res[i] = from[i]
+	}
+	return res
+}
+
+func runeCopyAppend(runes1 []rune, runes2 []rune) []rune {
+	res := make([]rune, len(runes1)+len(runes2))
+	idx := 0
+	for i := range runes1 {
+		res[idx] = runes1[i]
+		idx++
+	}
+	for i := range runes2 {
+		res[idx] = runes2[i]
+		idx++
+	}
+	return res
 }
