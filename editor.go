@@ -33,11 +33,21 @@ func (e *Editor) Edit(txt string) error {
 	}
 	txtRune := []rune(txt)
 	e.Buf = [][]rune{}
+	//p := 0
+	//for i := 0; i < len(txtRune); i++ {
+	//	if (i-p+1)%(e.ScreenWidth-0) == 0 || txtRune[i] == '\n' || i == len(txtRune)-1 {
+	//		e.Buf = append(e.Buf, txtRune[p:i+1])
+	//		p = i + 1
+	//	}
+	//}
+	w := 0
 	p := 0
 	for i := 0; i < len(txtRune); i++ {
-		if (i-p+1)%(e.ScreenWidth-0) == 0 || txtRune[i] == '\n' || i == len(txtRune)-1 {
+		w += runeWidth(txtRune[i])
+		if (w+1) > e.ScreenWidth-1 || txtRune[i] == '\n' {
 			e.Buf = append(e.Buf, txtRune[p:i+1])
 			p = i + 1
+			w = 0
 		}
 	}
 
@@ -143,26 +153,27 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 	tm.MoveCursor(1, fromIdx-e.Top+1)
 	for n := fromIdx; n <= toIdx; n++ {
 		if n >= len(e.Buf) {
-			continue
+			break
 		}
-		runes := runeRepeat(' ', e.ScreenWidth)
+
+		ln := len(e.Buf[n])
+		extraWidth := runesExtraWidth(e.Buf[n], -1)
+
+		var extraChar int32 = 0
+		if n < e.Top+e.ScreenHeight-1 {
+			extraChar = '\n'
+		}
+
+		// FULL PADDING
+		runes := runeRepeat('.', max(e.ScreenWidth-extraWidth, len(e.Buf[n])), extraChar)
 		copy(runes, e.Buf[n])
 
 		// COLORIZE
 		//runes := strings.ReplaceAll(e.Buf[n][:w], ":", tm.Color(":", tm.BLUE))
 
-		// full padding on all printed lines
-		runeReplace(runes, '\n', ' ')
-
-		if n < e.Top+e.ScreenHeight-1 {
-			runes = append(runes, '\n')
+		if runes[ln-1] == '\n' {
+			runes[ln-1] = ' '
 		}
-
-		//// don't print the final \n on the last screen line
-		//l = len(runes)
-		//if len(runes) > 0 && runes[l-1] == '\n' && n == e.Top+e.ScreenHeight-1 {
-		//	runes = runes[:l-1]
-		//}
 
 		tm.Print(string(runes))
 
@@ -194,24 +205,33 @@ func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, 
 
 	}
 
-	p := runeIndexOf(st, '\n')
+	st1, st2 := runesSplitToCover(st, e.ScreenWidth)
+	e.Buf[row] = runeCopy(st1)
+	_, rPushed := e.InsertAt(runeCopy(st2), 0, row+1)
+	rowsPushedDown += rPushed
 
-	if p == -1 || p == len(st)-1 {
-		p = e.ScreenWidth
-	} else {
-		p++
-		if p > e.ScreenWidth {
-			p = e.ScreenWidth
-		}
-	}
+	//i := runeIndexOf(st, '\n')
+	////extraWidth := runesExtraWidth(st, i)
+	////screenLimit := e.ScreenWidth - extraWidth
+	//
+	//if i == -1 || i == len(st)-1 {
+	//	i = e.ScreenWidth
+	//} else {
+	//	i = runesExtraWidth(st, 1)
+	//	i++
+	//	if i > e.ScreenWidth {
+	//		i = e.ScreenWidth
+	//	}
+	//}
+	//
+	//if len(st) < i {
+	//	e.Buf[row] = st
+	//} else {
+	//	e.Buf[row] = runeCopy(st[:i])
+	//	_, rPushed := e.InsertAt(st[i:], 0, row+1)
+	//	rowsPushedDown += rPushed
+	//}
 
-	if len(st) < p {
-		e.Buf[row] = st
-	} else {
-		e.Buf[row] = runeCopy(st[:p])
-		_, rPushed := e.InsertAt(st[p:], 0, row+1)
-		rowsPushedDown += rPushed
-	}
 	return len(ins), rowsPushedDown
 }
 
@@ -223,11 +243,16 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 			st := runesJoin(e.Buf[row : row2+1])
 			// remove the block:
 			e.Buf = append(e.Buf[:row], e.Buf[row2+1:]...)
-			// insert the block at the end of the previous line (pull up)
+			// remove last rune from the previous line
 			if len(e.Buf[row-1]) > 0 {
 				e.Buf[row-1] = e.Buf[row-1][:len(e.Buf[row-1])-1]
 			}
-			numWithdraws = -min(len(st), e.ScreenWidth-len(e.Buf[row-1])) - 1
+			// calculate how many cursor withdraws
+			emptySpaces := e.ScreenWidth - len(e.Buf[row-1]) - runesExtraWidth(e.Buf[row-1], -1)
+			numWithdraws = -runesToCover(st, emptySpaces) - 1
+			numWithdraws = -runesToCover(st, emptySpaces) - 1
+			//numWithdraws = -min(w1, w2) - 1
+			// insert the string at the end of the previous row
 			_, rowsToRedraw = e.InsertAt(st, len(e.Buf[row-1]), row-1)
 		}
 
@@ -338,11 +363,18 @@ func (e *Editor) MoveCursorSafe(x int, y int) {
 	}
 	e.X = x
 	e.Y = y
-	tm.MoveCursor(e.X+runesWidth(runes[:e.X-1]), e.Y)
+	tm.MoveCursor(e.X+runesExtraWidth(runes[:e.X-1], -1), e.Y)
 }
 
 func min(a int, b int) int {
 	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a int, b int) int {
+	if a > b {
 		return a
 	}
 	return b
@@ -356,10 +388,17 @@ func runeReplace(r []rune, search int32, replace int32) {
 	}
 }
 
-func runeRepeat(char int32, count int) []rune {
+// create a rune array filled with char. if extraChar !=0, also append it, growing the array by 1
+func runeRepeat(char int32, count int, extraChar int32) []rune {
+	if extraChar != 0 {
+		count++
+	}
 	res := make([]rune, count)
 	for i := 0; i < count; i++ {
 		res[i] = char
+	}
+	if extraChar != 0 {
+		res[count-1] = extraChar
 	}
 	return res
 }
@@ -415,10 +454,43 @@ func runeWidth(r rune) int {
 	return 1
 }
 
-func runesWidth(r []rune) int {
+// return the excessing width of tha runes:
+// runesExtraWidth('123')=0
+// runesExtraWidth('账123')=1
+// runesExtraWidth('账123账')=2
+// if maxIdx>-1, ignore runes after that index
+func runesExtraWidth(r []rune, maxIdx int) int {
 	res := 0
 	for i := 0; i < len(r); i++ {
 		res += runeWidth(r[i]) - 1
+		if maxIdx > -1 && i >= maxIdx {
+			break
+		}
 	}
 	return res
+}
+
+// returns how many runes of the passed array are necessary to cover the spaces, depending on their width
+func runesToCover(r []rune, spaces int) int {
+	w := 0
+	for i := 0; i < len(r); i++ {
+		w += runeWidth(r[i])
+		if w > spaces {
+			return i
+		}
+	}
+	return len(r)
+}
+
+// split r in r1 and r2.  r will have at max runesWidth=spaces, r2 the remaining runes
+// will also break after a \n char
+func runesSplitToCover(r []rune, spaces int) (r1 []rune, r2 []rune) {
+	w := 0
+	for i := 0; i < len(r); i++ {
+		w += runeWidth(r[i])
+		if w >= spaces || (i > 0 && r[i-1] == '\n') {
+			return r[:i], r[i:]
+		}
+	}
+	return r, []rune{}
 }

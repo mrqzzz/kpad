@@ -756,7 +756,9 @@ status:
   replicas: 1
   updatedReplicas: 1`
 
-	corporate = `－23
+	corporate = `－23－23－23－23－23－23:
+a－－－－－－－－－－－－
+123
 `
 
 	e := &Editor{}
