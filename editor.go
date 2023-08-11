@@ -19,6 +19,8 @@ type Editor struct {
 	Wordwrap     bool
 }
 
+var emptyDoc = []rune{'\n'}
+
 func (e *Editor) Edit(txt string) error {
 
 	// be sure to have a terminal
@@ -60,9 +62,30 @@ func (e *Editor) Edit(txt string) error {
 	e.DrawAll()
 
 	keyboard.Listen(func(key keys.Key) (stop bool, err error) {
-
 		if key.Code == keys.CtrlC {
 			return true, nil // Stop listener by returning true on Ctrl+C
+		} else if key.Code == keys.Home {
+			e.X = 1
+			e.MoveCursorSafe(e.X, e.Y)
+			tm.Flush()
+		} else if key.Code == keys.End {
+			e.X = e.ScreenWidth
+			e.MoveCursorSafe(e.X, e.Y)
+			tm.Flush()
+		} else if key.Code == keys.PgUp {
+			e.Top -= e.ScreenHeight
+			if e.Top < 0 {
+				e.Top = 0
+			}
+			e.MoveCursorSafe(e.X, e.Y)
+			e.DrawAll()
+		} else if key.Code == keys.PgDown {
+			e.Top += e.ScreenHeight
+			if e.Top > len(e.Buf)-1 {
+				e.Top = len(e.Buf) - 1
+			}
+			e.MoveCursorSafe(e.X, e.Y)
+			e.DrawAll()
 		} else if key.Code == keys.Down {
 			if e.Y >= e.ScreenHeight && e.Top < len(e.Buf)-e.ScreenHeight {
 				// scroll up inserting the bottom line
@@ -99,15 +122,19 @@ func (e *Editor) Edit(txt string) error {
 			e.MoveCursorSafe(e.X, e.Y)
 			//e.MoveCursorSafe(e.X, e.Y)
 			tm.Flush()
+		} else if key.Code == keys.Backspace {
+			withdraws, _ := e.DeleteAt(e.X-1, e.Y+e.Top-1)
+			e.CursorWithdraw(withdraws)
+			e.MoveCursorSafe(e.X, e.Y)
+			//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
+			e.DrawAll()
+		} else if key.Code == keys.CtrlD {
+			e.DeleteRow(e.Y + e.Top - 1)
+			e.MoveCursorSafe(e.X, e.Y)
+			//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
+			e.DrawAll()
 		} else {
 			// EDIT
-			if key.Code == keys.Backspace {
-				withdraws, _ := e.DeleteAt(e.X-1, e.Y+e.Top-1)
-				e.CursorWithdraw(withdraws)
-				e.MoveCursorSafe(e.X, e.Y)
-				//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
-				e.DrawAll()
-			}
 			if key.Code == keys.Enter {
 				key.Runes = []rune{'\n'}
 			}
@@ -116,6 +143,22 @@ func (e *Editor) Edit(txt string) error {
 			}
 
 			if len(key.Runes) > 0 {
+
+				// some symbols
+				if key.AltPressed && key.Runes[0] == 232 {
+					key.Runes[0] = '['
+				} else if key.AltPressed && key.Runes[0] == 521 {
+					key.Runes[0] = ']'
+				} else if key.AltPressed && key.Runes[0] == 92 {
+					key.Runes[0] = '`'
+				} else if key.AltPressed && key.Runes[0] == 242 {
+					key.Runes[0] = '@'
+				} else if key.AltPressed && key.Runes[0] == 224 {
+					key.Runes[0] = '#'
+				} else if key.AltPressed && key.Runes[0] == 101 {
+					key.Runes[0] = '€'
+				}
+
 				// ADD TEXT
 				oldY := e.Y
 				insertedCharCount, rowsPushedDown := e.InsertAt(key.Runes, e.X-1, e.Y+e.Top-1)
@@ -209,28 +252,6 @@ func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, 
 	e.Buf[row] = runeCopy(st1)
 	_, rPushed := e.InsertAt(runeCopy(st2), 0, row+1)
 	rowsPushedDown += rPushed
-
-	//i := runeIndexOf(st, '\n')
-	////extraWidth := runesExtraWidth(st, i)
-	////screenLimit := e.ScreenWidth - extraWidth
-	//
-	//if i == -1 || i == len(st)-1 {
-	//	i = e.ScreenWidth
-	//} else {
-	//	i = runesExtraWidth(st, 1)
-	//	i++
-	//	if i > e.ScreenWidth {
-	//		i = e.ScreenWidth
-	//	}
-	//}
-	//
-	//if len(st) < i {
-	//	e.Buf[row] = st
-	//} else {
-	//	e.Buf[row] = runeCopy(st[:i])
-	//	_, rPushed := e.InsertAt(st[i:], 0, row+1)
-	//	rowsPushedDown += rPushed
-	//}
 
 	return len(ins), rowsPushedDown
 }
@@ -366,131 +387,10 @@ func (e *Editor) MoveCursorSafe(x int, y int) {
 	tm.MoveCursor(e.X+runesExtraWidth(runes[:e.X-1], -1), e.Y)
 }
 
-func min(a int, b int) int {
-	if a < b {
-		return a
+func (e *Editor) DeleteRow(idx int) {
+	if len(e.Buf) == 1 {
+		e.Buf[0] = runeCopy(emptyDoc)
+	} else if idx < len(e.Buf) {
+		e.Buf = append(e.Buf[:idx], e.Buf[idx+1:]...)
 	}
-	return b
-}
-
-func max(a int, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func runeReplace(r []rune, search int32, replace int32) {
-	for i := 0; i < len(r); i++ {
-		if r[i] == search {
-			r[i] = replace
-		}
-	}
-}
-
-// create a rune array filled with char. if extraChar !=0, also append it, growing the array by 1
-func runeRepeat(char int32, count int, extraChar int32) []rune {
-	if extraChar != 0 {
-		count++
-	}
-	res := make([]rune, count)
-	for i := 0; i < count; i++ {
-		res[i] = char
-	}
-	if extraChar != 0 {
-		res[count-1] = extraChar
-	}
-	return res
-}
-
-func runeIndexOf(r []rune, char int32) int {
-	for i := 0; i < len(r); i++ {
-		if r[i] == char {
-			return i
-		}
-	}
-	return -1
-}
-
-func (e *Editor) runeReplaceBadChars(r []rune) {
-	runeReplace(r, '\r', '\n')
-	runeReplace(r, '\t', ' ')
-}
-
-func runesJoin(rows [][]rune) []rune {
-	var res []rune
-	for i := 0; i < len(rows); i++ {
-		res = append(res, rows[i]...)
-	}
-	return res
-}
-
-func runeCopy(from []rune) []rune {
-	res := make([]rune, len(from))
-	for i := range from {
-		res[i] = from[i]
-	}
-	return res
-}
-
-func runeCopyAppend(runes1 []rune, runes2 []rune) []rune {
-	res := make([]rune, len(runes1)+len(runes2))
-	idx := 0
-	for i := range runes1 {
-		res[idx] = runes1[i]
-		idx++
-	}
-	for i := range runes2 {
-		res[idx] = runes2[i]
-		idx++
-	}
-	return res
-}
-
-func runeWidth(r rune) int {
-	if r > 255 {
-		return 2
-	}
-	return 1
-}
-
-// return the excessing width of tha runes:
-// runesExtraWidth('123')=0
-// runesExtraWidth('账123')=1
-// runesExtraWidth('账123账')=2
-// if maxIdx>-1, ignore runes after that index
-func runesExtraWidth(r []rune, maxIdx int) int {
-	res := 0
-	for i := 0; i < len(r); i++ {
-		res += runeWidth(r[i]) - 1
-		if maxIdx > -1 && i >= maxIdx {
-			break
-		}
-	}
-	return res
-}
-
-// returns how many runes of the passed array are necessary to cover the spaces, depending on their width
-func runesToCover(r []rune, spaces int) int {
-	w := 0
-	for i := 0; i < len(r); i++ {
-		w += runeWidth(r[i])
-		if w > spaces {
-			return i
-		}
-	}
-	return len(r)
-}
-
-// split r in r1 and r2.  r will have at max runesWidth=spaces, r2 the remaining runes
-// will also break after a \n char
-func runesSplitToCover(r []rune, spaces int) (r1 []rune, r2 []rune) {
-	w := 0
-	for i := 0; i < len(r); i++ {
-		w += runeWidth(r[i])
-		if w >= spaces || (i > 0 && r[i-1] == '\n') {
-			return r[:i], r[i:]
-		}
-	}
-	return r, []rune{}
 }
