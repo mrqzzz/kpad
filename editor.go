@@ -33,24 +33,29 @@ func (e *Editor) Edit(txt string) error {
 			break
 		}
 	}
+
+	// prepare buffer
 	txtRune := []rune(txt)
 	e.Buf = [][]rune{}
-	//p := 0
-	//for i := 0; i < len(txtRune); i++ {
-	//	if (i-p+1)%(e.ScreenWidth-0) == 0 || txtRune[i] == '\n' || i == len(txtRune)-1 {
-	//		e.Buf = append(e.Buf, txtRune[p:i+1])
-	//		p = i + 1
-	//	}
-	//}
 	w := 0
 	p := 0
-	for i := 0; i < len(txtRune); i++ {
+	l := len(txtRune)
+	for i := 0; i < l; i++ {
 		w += runeWidth(txtRune[i])
-		if (w+1) > e.ScreenWidth-1 || txtRune[i] == '\n' {
+		if (w+1) > e.ScreenWidth-1 || txtRune[i] == '\n' || i == l-1 {
 			e.Buf = append(e.Buf, txtRune[p:i+1])
 			p = i + 1
 			w = 0
 		}
+	}
+	// empty doc?
+	if len(e.Buf) == 0 {
+		e.Buf = append(e.Buf, runeCopy(emptyDoc))
+	}
+	// be sure the last row has a LF at the end
+	lastRow := e.Buf[len(e.Buf)-1]
+	if lastRow[len(lastRow)-1] != '\n' {
+		e.Buf[len(e.Buf)-1] = runeCopyAppend(e.Buf[len(e.Buf)-1], []rune{'\n'})
 	}
 
 	e.Top = 0
@@ -211,14 +216,16 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 		runes := runeRepeat('.', max(e.ScreenWidth-extraWidth, len(e.Buf[n])), extraChar)
 		copy(runes, e.Buf[n])
 
-		// COLORIZE
-		//runes := strings.ReplaceAll(e.Buf[n][:w], ":", tm.Color(":", tm.BLUE))
-
 		if runes[ln-1] == '\n' {
 			runes[ln-1] = ' '
 		}
 
-		tm.Print(string(runes))
+		st := string(runes)
+
+		// COLORIZE
+		st = strings.ReplaceAll(st, ":", tm.Color(":", tm.BLUE))
+
+		tm.Print(st)
 
 	}
 	e.MoveCursorSafe(e.X, e.Y)
