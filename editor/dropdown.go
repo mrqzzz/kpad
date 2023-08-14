@@ -2,9 +2,7 @@ package editor
 
 import (
 	"atomicgo.dev/keyboard/keys"
-	"fmt"
 	tm "github.com/buger/goterm"
-	"strconv"
 )
 
 type Dropdown struct {
@@ -18,6 +16,7 @@ type Dropdown struct {
 }
 
 func NewDropdown(e *Editor, p DialogParent, x, y, width, height int, keys []string, values []string) *Dropdown {
+	formatValuesStrings(values, width)
 	if x+width > e.ScreenWidth {
 		x = e.ScreenWidth - width
 	}
@@ -26,9 +25,26 @@ func NewDropdown(e *Editor, p DialogParent, x, y, width, height int, keys []stri
 	}
 	return &Dropdown{
 		Box:          Box{x, y, width, height},
+		Editor:       e,
 		DialogParent: p,
 		Keys:         keys,
 		Values:       values,
+	}
+}
+
+func formatValuesStrings(values []string, maxWidth int) {
+	for i := range values {
+		r := []rune(values[i])
+		//w := runesWidth(r)
+		//if w > maxWidth {
+		r, _ = runesSplitToCover(r, maxWidth)
+		//}
+		w := runesWidth(r)
+		if maxWidth > w {
+			r = runeCopyAppend(r, runeRepeat(' ', maxWidth-w, 0))
+		}
+		values[i] = string(r)
+		//values[i] = fmt.Sprintf("%-"+strconv.Itoa(n)+"s", string(r))
 	}
 }
 
@@ -62,12 +78,16 @@ func (d *Dropdown) ListenKeys(key keys.Key) (stop bool, err error) {
 
 func (d *Dropdown) DrawAll() {
 	for i := d.TopIndex; i < d.TopIndex+d.Height; i++ {
-		st := fmt.Sprintf("%"+strconv.Itoa(d.Width)+"s", d.Values[i])
+		st := d.Values[i]
 		if i == d.SelectedIndex {
 			st = tm.Background(st, tm.BLUE)
+		} else {
+			st = tm.Background(st, tm.WHITE)
 		}
+		st = tm.Color(st, tm.BLACK)
 		tm.MoveCursor(d.X, d.Y+i-d.TopIndex)
 		tm.Print(st)
 	}
+	tm.MoveCursor(d.Editor.X, d.Editor.Y)
 	tm.Flush()
 }

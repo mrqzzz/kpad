@@ -414,9 +414,12 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 func (e *Editor) CloseDialog(d Dialog, accept bool) {
 	if e.Dialog != nil {
-		if accept {
-			fmt.Println("ACCEPTED!")
+		if drop, ok := e.Dialog.(*Dropdown); ok {
+			if accept {
+				e.InsertAt([]rune(drop.Keys[drop.SelectedIndex]), e.X-1, e.Y+e.Top-1)
+			}
 		}
+
 	}
 	e.Dialog = nil
 	e.DrawAll()

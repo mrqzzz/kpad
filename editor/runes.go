@@ -81,11 +81,27 @@ func runeCopyAppend(runes1 []rune, runes2 []rune) []rune {
 	return res
 }
 
+// return the Terminal emulator Char width of the UTF symbol
+//
+//	"a"  -> 1
+//	"あ" -> 2
 func runeWidth(r rune) int {
 	if r > 255 {
 		return 2
 	}
 	return 1
+}
+
+// return the Terminal emulator Char width of the rune array considering the Terminal emulator Char width of the UTF symbol
+//
+//	"abc"  -> 3
+//	"あbc" -> 4
+func runesWidth(r []rune) int {
+	res := 0
+	for i := 0; i < len(r); i++ {
+		res += runeWidth(r[i])
+	}
+	return res
 }
 
 // return the excessing width of tha runes:
