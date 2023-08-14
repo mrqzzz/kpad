@@ -1,4 +1,4 @@
-package main
+package editor
 
 import (
 	"atomicgo.dev/keyboard"
@@ -16,7 +16,7 @@ type Editor struct {
 	X            int
 	Y            int
 	Top          int // first visible row index
-	Wordwrap     bool
+	Dialog       Dialog
 }
 
 var emptyDoc = []rune{'\n'}
@@ -66,128 +66,8 @@ func (e *Editor) Edit(txt string) error {
 
 	e.DrawAll()
 
-	keyboard.Listen(func(key keys.Key) (stop bool, err error) {
-		if key.Code == keys.CtrlC {
-			return true, nil // Stop listener by returning true on Ctrl+C
-		} else if key.Code == keys.Home {
-			e.X = 1
-			e.MoveCursorSafe(e.X, e.Y)
-			tm.Flush()
-		} else if key.Code == keys.End {
-			e.X = e.ScreenWidth
-			e.MoveCursorSafe(e.X, e.Y)
-			tm.Flush()
-		} else if key.Code == keys.PgUp {
-			e.Top -= e.ScreenHeight
-			if e.Top < 0 {
-				e.Top = 0
-			}
-			e.MoveCursorSafe(e.X, e.Y)
-			e.DrawAll()
-		} else if key.Code == keys.PgDown {
-			e.Top += e.ScreenHeight
-			if e.Top > len(e.Buf)-1 {
-				e.Top = len(e.Buf) - 1
-			}
-			e.MoveCursorSafe(e.X, e.Y)
-			e.DrawAll()
-		} else if key.Code == keys.Down {
-			if e.Y >= e.ScreenHeight && e.Top < len(e.Buf)-e.ScreenHeight {
-				// scroll up inserting the bottom line
-				e.Top++
-				fmt.Fprintf(tm.Screen, "\033[1S")
-				e.MoveCursorSafe(e.X, e.Y)
-				e.DrawRows(e.Top+e.ScreenHeight-1, e.Top+e.ScreenHeight-1)
-			}
-			if e.Y < e.ScreenHeight {
-				e.Y++
-				e.MoveCursorSafe(e.X, e.Y)
-				tm.Flush()
-			}
-		} else if key.Code == keys.Up {
-			if e.Y == 1 && e.Top > 0 {
-				// scroll down inserting the top line
-				e.Top--
-				fmt.Fprintf(tm.Screen, "\033[1T")
-				e.MoveCursorSafe(e.X, e.Y)
-				e.DrawRows(e.Top, e.Top)
-			}
-			if e.Y > 1 {
-				e.Y--
-				e.MoveCursorSafe(e.X, e.Y)
-				tm.Flush()
-			}
-		} else if key.Code == keys.Left {
-			e.CursorWithdraw(-1)
-			e.MoveCursorSafe(e.X, e.Y)
-			//e.MoveCursorSafe(e.X, e.Y)
-			tm.Flush()
-		} else if key.Code == keys.Right {
-			e.CursorAdvance(1)
-			e.MoveCursorSafe(e.X, e.Y)
-			//e.MoveCursorSafe(e.X, e.Y)
-			tm.Flush()
-		} else if key.Code == keys.Backspace {
-			withdraws, _ := e.DeleteAt(e.X-1, e.Y+e.Top-1)
-			e.CursorWithdraw(withdraws)
-			e.MoveCursorSafe(e.X, e.Y)
-			//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
-			e.DrawAll()
-		} else if key.Code == keys.CtrlD {
-			e.DeleteRow(e.Y + e.Top - 1)
-			e.MoveCursorSafe(e.X, e.Y)
-			//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
-			e.DrawAll()
-		} else {
-			// EDIT
-			if key.Code == keys.Enter {
-				key.Runes = []rune{'\n'}
-			}
-			if key.Code == keys.Tab {
-				key.Runes = []rune{' ', ' '}
-			}
+	keyboard.Listen(e.ListenKeys)
 
-			if len(key.Runes) > 0 {
-
-				// some symbols
-				if key.AltPressed && key.Runes[0] == 232 {
-					key.Runes[0] = '['
-				} else if key.AltPressed && key.Runes[0] == 521 {
-					key.Runes[0] = ']'
-				} else if key.AltPressed && key.Runes[0] == 92 {
-					key.Runes[0] = '`'
-				} else if key.AltPressed && key.Runes[0] == 242 {
-					key.Runes[0] = '@'
-				} else if key.AltPressed && key.Runes[0] == 224 {
-					key.Runes[0] = '#'
-				} else if key.AltPressed && key.Runes[0] == 101 {
-					key.Runes[0] = '€'
-				}
-
-				// ADD TEXT
-				oldY := e.Y
-				insertedCharCount, rowsPushedDown := e.InsertAt(key.Runes, e.X-1, e.Y+e.Top-1)
-				e.CursorAdvance(insertedCharCount)
-
-				// optimized partial redraw:
-				if e.Y == oldY {
-					toIdx := e.findNextLineFeed(e.Top + e.Y - 1)
-					if rowsPushedDown-1 > (toIdx - e.Top + e.Y - 1) {
-						e.DrawAll()
-					} else {
-						e.DrawRows(e.Top+e.Y-1, min(e.Top+e.Y-1+rowsPushedDown, e.Top+e.ScreenHeight-1))
-					}
-
-				} else {
-					e.DrawAll()
-				}
-				e.MoveCursorSafe(e.X, e.Y)
-				tm.Flush()
-			}
-		}
-
-		return false, nil // Return false to continue listening
-	})
 	return nil
 }
 
@@ -197,7 +77,6 @@ func (e *Editor) DrawAll() {
 }
 
 func (e *Editor) DrawRows(fromIdx int, toIdx int) {
-
 	tm.MoveCursor(1, fromIdx-e.Top+1)
 	for n := fromIdx; n <= toIdx; n++ {
 		if n >= len(e.Buf) {
@@ -400,4 +279,145 @@ func (e *Editor) DeleteRow(idx int) {
 	} else if idx < len(e.Buf) {
 		e.Buf = append(e.Buf[:idx], e.Buf[idx+1:]...)
 	}
+}
+
+func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
+
+	if e.Dialog != nil {
+		return e.Dialog.ListenKeys(key)
+	}
+
+	if key.Code == keys.CtrlC {
+		return true, nil // Stop listener by returning true on Ctrl+C
+	} else if key.Code == keys.Home {
+		e.X = 1
+		e.MoveCursorSafe(e.X, e.Y)
+		tm.Flush()
+	} else if key.Code == keys.CtrlAt {
+		e.Dialog = NewDropdown(e, e, e.X, e.Y+1, 10, 3, []string{"k1", "k2", "k3", "k4", "k5", "k6"}, []string{"ああああak1", "ak2", "ak3", "ak4", "ak5", "ak6"})
+		e.Dialog.DrawAll()
+	} else if key.Code == keys.End {
+		e.X = e.ScreenWidth
+		e.MoveCursorSafe(e.X, e.Y)
+		tm.Flush()
+	} else if key.Code == keys.PgUp {
+		e.Top -= e.ScreenHeight
+		if e.Top < 0 {
+			e.Top = 0
+		}
+		e.MoveCursorSafe(e.X, e.Y)
+		e.DrawAll()
+	} else if key.Code == keys.PgDown {
+		e.Top += e.ScreenHeight
+		if e.Top > len(e.Buf)-1 {
+			e.Top = len(e.Buf) - 1
+		}
+		e.MoveCursorSafe(e.X, e.Y)
+		e.DrawAll()
+	} else if key.Code == keys.Down {
+		if e.Y >= e.ScreenHeight && e.Top < len(e.Buf)-e.ScreenHeight {
+			// scroll up inserting the bottom line
+			e.Top++
+			fmt.Fprintf(tm.Screen, "\033[1S")
+			e.MoveCursorSafe(e.X, e.Y)
+			e.DrawRows(e.Top+e.ScreenHeight-1, e.Top+e.ScreenHeight-1)
+		}
+		if e.Y < e.ScreenHeight {
+			e.Y++
+			e.MoveCursorSafe(e.X, e.Y)
+			tm.Flush()
+		}
+	} else if key.Code == keys.Up {
+		if e.Y == 1 && e.Top > 0 {
+			// scroll down inserting the top line
+			e.Top--
+			fmt.Fprintf(tm.Screen, "\033[1T")
+			e.MoveCursorSafe(e.X, e.Y)
+			e.DrawRows(e.Top, e.Top)
+		}
+		if e.Y > 1 {
+			e.Y--
+			e.MoveCursorSafe(e.X, e.Y)
+			tm.Flush()
+		}
+	} else if key.Code == keys.Left {
+		e.CursorWithdraw(-1)
+		e.MoveCursorSafe(e.X, e.Y)
+		//e.MoveCursorSafe(e.X, e.Y)
+		tm.Flush()
+	} else if key.Code == keys.Right {
+		e.CursorAdvance(1)
+		e.MoveCursorSafe(e.X, e.Y)
+		//e.MoveCursorSafe(e.X, e.Y)
+		tm.Flush()
+	} else if key.Code == keys.Backspace {
+		withdraws, _ := e.DeleteAt(e.X-1, e.Y+e.Top-1)
+		e.CursorWithdraw(withdraws)
+		e.MoveCursorSafe(e.X, e.Y)
+		//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
+		e.DrawAll()
+	} else if key.Code == keys.CtrlD {
+		e.DeleteRow(e.Y + e.Top - 1)
+		e.MoveCursorSafe(e.X, e.Y)
+		//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
+		e.DrawAll()
+	} else {
+		// EDIT
+		if key.Code == keys.Enter {
+			key.Runes = []rune{'\n'}
+		}
+		if key.Code == keys.Tab {
+			key.Runes = []rune{' ', ' '}
+		}
+
+		if len(key.Runes) > 0 {
+
+			// some symbols
+			if key.AltPressed && key.Runes[0] == 232 {
+				key.Runes[0] = '['
+			} else if key.AltPressed && key.Runes[0] == 521 {
+				key.Runes[0] = ']'
+			} else if key.AltPressed && key.Runes[0] == 92 {
+				key.Runes[0] = '`'
+			} else if key.AltPressed && key.Runes[0] == 242 {
+				key.Runes[0] = '@'
+			} else if key.AltPressed && key.Runes[0] == 224 {
+				key.Runes[0] = '#'
+			} else if key.AltPressed && key.Runes[0] == 101 {
+				key.Runes[0] = '€'
+			}
+
+			// ADD TEXT
+			oldY := e.Y
+			insertedCharCount, rowsPushedDown := e.InsertAt(key.Runes, e.X-1, e.Y+e.Top-1)
+			e.CursorAdvance(insertedCharCount)
+
+			// optimized partial redraw:
+			if e.Y == oldY {
+				toIdx := e.findNextLineFeed(e.Top + e.Y - 1)
+				if rowsPushedDown-1 > (toIdx - e.Top + e.Y - 1) {
+					e.DrawAll()
+				} else {
+					e.DrawRows(e.Top+e.Y-1, min(e.Top+e.Y-1+rowsPushedDown, e.Top+e.ScreenHeight-1))
+				}
+
+			} else {
+				e.DrawAll()
+			}
+			e.MoveCursorSafe(e.X, e.Y)
+			tm.Flush()
+		}
+	}
+
+	return false, nil // Return false to continue listening
+}
+
+func (e *Editor) CloseDialog(d Dialog, accept bool) {
+	if e.Dialog != nil {
+		if accept {
+			fmt.Println("ACCEPTED!")
+		}
+	}
+	e.Dialog = nil
+	e.DrawAll()
 }

@@ -2,6 +2,7 @@
 package main
 
 import (
+	"mrqzzz/kpad/editor"
 	"strings"
 )
 
@@ -760,7 +761,7 @@ status:
 	//a－－－－－－－－－－－－
 	//123`
 
-	e := &Editor{}
+	e := &editor.Editor{}
 	e.Edit(corporate)
 
 }
