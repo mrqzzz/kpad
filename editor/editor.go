@@ -1,10 +1,10 @@
 package editor
 
 import (
-	"atomicgo.dev/keyboard"
-	"atomicgo.dev/keyboard/keys"
 	"fmt"
 	tm "github.com/buger/goterm"
+	"github.com/mrqzzz/keyboard"
+	"github.com/mrqzzz/keyboard/keys"
 	"strings"
 	"time"
 )
@@ -294,8 +294,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
 	} else if key.Code == keys.CtrlAt {
-		e.Dialog = NewDropdown(e, e, e.X, e.Y+1, 10, 3, []string{"k1", "k2", "k3", "k4", "k5", "k6"}, []string{"ああああak1", "ak2", "ak3", "ak4", "ak5", "ak6"})
-		e.Dialog.DrawAll()
+		e.OpenDropdown()
 	} else if key.Code == keys.End {
 		e.X = e.ScreenWidth
 		e.MoveCursorSafe(e.X, e.Y)
@@ -410,6 +409,12 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 	}
 
 	return false, nil // Return false to continue listening
+}
+
+func (e *Editor) OpenDropdown() {
+	e.Dialog = NewDropdown(e, e, e.X, e.Y+1, 10, 3, []string{"k1", "k2", "k3", "k4", "k5", "k6"}, []string{"ああああak1", "ak2", "ak3", "ak4", "ak5", "ak6"})
+	e.Dialog.DrawAll()
+
 }
 
 func (e *Editor) CloseDialog(d Dialog, accept bool) {

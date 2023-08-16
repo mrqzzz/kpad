@@ -3,8 +3,8 @@ module mrqzzz/kpad
 go 1.19
 
 require (
-	atomicgo.dev/keyboard v0.2.9
 	github.com/buger/goterm v1.0.4
+	github.com/mrqzzz/keyboard v0.0.0-20230816095546-7887158e165b
 	github.com/stretchr/testify v1.8.4
 )
 

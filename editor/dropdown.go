@@ -1,8 +1,8 @@
 package editor
 
 import (
-	"atomicgo.dev/keyboard/keys"
 	tm "github.com/buger/goterm"
+	"github.com/mrqzzz/keyboard/keys"
 )
 
 type Dropdown struct {

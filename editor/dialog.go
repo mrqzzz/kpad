@@ -1,6 +1,6 @@
 package editor
 
-import "atomicgo.dev/keyboard/keys"
+import "github.com/mrqzzz/keyboard/keys"
 
 type Dialog interface {
 	ListenKeys(key keys.Key) (stop bool, err error)
