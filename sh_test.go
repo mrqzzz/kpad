@@ -3,15 +3,16 @@ package main
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	editor "mrqzzz/kpad/editor"
 	"testing"
 )
 
 func TestExplain(t *testing.T) {
 	t.SkipNow()
-	explain, err := ExecExplain("pod.spec")
+	explain, err := editor.ExecExplain("pod.spec")
 	assert.NoError(t, err)
 	fmt.Println(string(explain))
-	tree := BuildExplainFieldsTree(explain)
+	tree := editor.BuildExplainFieldsTree(explain)
 	fmt.Println(tree)
 }
 
@@ -32,62 +33,64 @@ func TestGetLeftmostWordAtLine(t *testing.T) {
 🙂
 x`
 
-	st, x1, x2 := getLeftmostWordAtLine(txt, 0)
+	e := editor.NewEditor(100, 100)
+	e.LoadText(txt)
+	st, x1, x2 := editor.GetLeftmostWordAtLine(e.Buf[0])
 	assert.Equal(t, "row0:", st)
 	assert.Equal(t, 0, x1)
 	assert.Equal(t, 5, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 1)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[1])
 	assert.Equal(t, "row1:", st)
 	assert.Equal(t, 2, x1)
 	assert.Equal(t, 7, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 2)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[2])
 	assert.Equal(t, "row2:", st)
 	assert.Equal(t, 4, x1)
 	assert.Equal(t, 9, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 3)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[3])
 	assert.Equal(t, "3", st)
 	assert.Equal(t, 0, x1)
 	assert.Equal(t, 1, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 4)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[4])
 	assert.Equal(t, "row4:", st)
 	assert.Equal(t, 6, x1)
 	assert.Equal(t, 11, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 5)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[5])
 	assert.Equal(t, "row5:", st)
 	assert.Equal(t, 2, x1)
 	assert.Equal(t, 7, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 7)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[7])
 	assert.Equal(t, "", st)
 	assert.Equal(t, 0, x1)
 	assert.Equal(t, 0, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 8)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[8])
 	assert.Equal(t, "*", st)
 	assert.Equal(t, 4, x1)
 	assert.Equal(t, 5, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 9)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[9])
 	assert.Equal(t, "", st)
 	assert.Equal(t, 0, x1)
 	assert.Equal(t, 0, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 11)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[11])
 	assert.Equal(t, "11", st)
 	assert.Equal(t, 0, x1)
 	assert.Equal(t, 2, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 13)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[13])
 	assert.Equal(t, "🙂", st)
 	assert.Equal(t, 0, x1)
-	assert.Equal(t, 4, x2)
+	assert.Equal(t, 1, x2)
 
-	st, x1, x2 = getLeftmostWordAtLine(txt, 14)
+	st, x1, x2 = editor.GetLeftmostWordAtLine(e.Buf[14])
 	assert.Equal(t, "x", st)
 	assert.Equal(t, 0, x1)
 	assert.Equal(t, 1, x2)
@@ -111,8 +114,9 @@ spec:
         
          
 `
-
-	st := buildCurrentPath(txt, 6, 12)
+	e := editor.NewEditor(100, 100)
+	e.LoadText(txt)
+	st := editor.BuildCurrentPath(e, 6, 12)
 	assert.Equal(t, "spec.containers.ports", st)
 
 }
@@ -140,20 +144,22 @@ spec:
         
          
 `
+	e := editor.NewEditor(100, 100)
+	e.LoadText(txt)
 
-	st := buildCurrentPath(txt, 3, 3)
+	st := editor.BuildCurrentPath(e, 3, 2)
 	assert.Equal(t, "metadata", st)
 
-	st = buildCurrentPath(txt, 5, 7)
+	st = editor.BuildCurrentPath(e, 5, 7)
 	assert.Equal(t, "spec.selector.matchLabels", st)
 
-	st = buildCurrentPath(txt, 9, 18)
-	assert.Equal(t, "spec.template.spec.containers.ports", st)
+	st = editor.BuildCurrentPath(e, 11, 18)
+	assert.Equal(t, "spec.template.spec.containers.ports.containerPort", st)
 
-	st = buildCurrentPath(txt, 2, 1)
-	assert.Equal(t, "", st)
+	st = editor.BuildCurrentPath(e, 2, 1)
+	assert.Equal(t, "kind", st)
 
-	st = buildCurrentPath(txt, 1, 7)
+	st = editor.BuildCurrentPath(e, 1, 7)
 	assert.Equal(t, "spec", st)
 
 }

@@ -21,19 +21,14 @@ type Editor struct {
 
 var emptyDoc = []rune{'\n'}
 
-func (e *Editor) Edit(txt string) error {
-
-	// be sure to have a terminal
-	for cnt := 0; cnt < 500; cnt++ {
-		e.ScreenWidth = tm.Width()
-		e.ScreenHeight = tm.Height()
-		if e.ScreenWidth == 0 && e.ScreenHeight == 0 {
-			time.Sleep(time.Millisecond * 10)
-		} else {
-			break
-		}
+func NewEditor(dummyX, dummyY int) *Editor {
+	return &Editor{
+		ScreenWidth:  dummyX,
+		ScreenHeight: dummyY,
 	}
+}
 
+func (e *Editor) LoadText(txt string) {
 	// prepare buffer
 	txtRune := []rune(txt)
 	e.Buf = [][]rune{}
@@ -56,6 +51,20 @@ func (e *Editor) Edit(txt string) error {
 	lastRow := e.Buf[len(e.Buf)-1]
 	if lastRow[len(lastRow)-1] != '\n' {
 		e.Buf[len(e.Buf)-1] = runeCopyAppend(e.Buf[len(e.Buf)-1], []rune{'\n'})
+	}
+
+}
+
+func (e *Editor) Edit() error {
+	// be sure to have a terminal
+	for cnt := 0; cnt < 500; cnt++ {
+		e.ScreenWidth = tm.Width()
+		e.ScreenHeight = tm.Height()
+		if e.ScreenWidth == 0 && e.ScreenHeight == 0 {
+			time.Sleep(time.Millisecond * 10)
+		} else {
+			break
+		}
 	}
 
 	e.Top = 0
@@ -255,6 +264,16 @@ func (e *Editor) findNextLineFeed(fromIdx int) int {
 		}
 	}
 	return len(e.Buf) - 1
+}
+
+// returns the row index in Buf where a \n is found, going back, starting from fromIndex, excluded.
+func (e *Editor) findPrevLineFeed(fromIdx int) int {
+	for i := fromIdx - 1; i >= 0; i-- {
+		if runeIndexOf(e.Buf[i], '\n') > -1 {
+			return i
+		}
+	}
+	return -1
 }
 
 func (e *Editor) MoveCursorSafe(x int, y int) {

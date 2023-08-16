@@ -11,7 +11,8 @@ func main() {
 	//a－－－－－－－－－－－－
 	//123`
 
-	e := &editor.Editor{}
-	e.Edit(corporate)
+	e := editor.NewEditor(0, 0)
+	e.LoadText(corporate)
+	e.Edit()
 
 }

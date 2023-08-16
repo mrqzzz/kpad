@@ -51,6 +51,7 @@ func (e *Editor) runeReplaceBadChars(r []rune) {
 	runeReplace(r, '\t', ' ')
 }
 
+// join the rows or runes, returning a single row of runes
 func runesJoin(rows [][]rune) []rune {
 	var res []rune
 	for i := 0; i < len(rows); i++ {
