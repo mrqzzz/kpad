@@ -276,6 +276,54 @@ func (e *Editor) findPrevLineFeed(fromIdx int) int {
 	return -1
 }
 
+func (e *Editor) GetWordAtPos(col, row int) (word []rune, startCol, startRow, endCol, endRow int) {
+	if row > len(e.Buf)-1 {
+		return
+	}
+	c := col
+	r := row
+	//find left limit
+	for {
+		if !isLetter(e.Buf[r][c]) {
+			break
+		}
+		startCol = c
+		startRow = r
+		c--
+		if c < 0 {
+			r--
+			if r < 0 {
+				break
+			}
+			c = len(e.Buf[r]) - 1
+		}
+	}
+	c = col
+	r = row
+	//find right limit
+	for {
+		if !isLetter(e.Buf[r][c]) {
+			break
+		}
+		endCol = c
+		endRow = r
+		c++
+		if c >= len(e.Buf[r]) {
+			r++
+			if r >= len(e.Buf) {
+				break
+			}
+			c = 0
+		}
+	}
+	if startRow != endRow {
+		word = runeCopyAppend(e.Buf[startRow][startCol:], e.Buf[endRow][:endCol])
+	} else {
+		word = runeCopy(e.Buf[startRow][startCol:endCol])
+	}
+	return
+}
+
 func (e *Editor) MoveCursorSafe(x int, y int) {
 	if y > len(e.Buf)-e.Top {
 		y = len(e.Buf) - e.Top
@@ -431,6 +479,8 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 }
 
 func (e *Editor) OpenDropdown() {
+	word, _, _, _, _ := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
+	fmt.Println(word)
 	path := BuildCurrentPath(e, e.X-1, e.Y-2+e.Top)
 	if path == "" {
 		bytes, err := ExecKubectlApiResources()
