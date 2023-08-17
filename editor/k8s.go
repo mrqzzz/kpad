@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -14,6 +15,16 @@ import (
 //	}
 //	//drop.SetOptions(items, nil)
 //}
+
+func GenerateResourceTemplate(resourceName string, resourceVersion string) string {
+	st := `apiVersion: %s
+kind: %s
+metadata:
+  
+spec:
+  `
+	return fmt.Sprintf(st, resourceVersion, resourceName)
+}
 
 // x and y are relative to buf, not the cursor
 func BuildCurrentPath(e *Editor, x int, y int) string {

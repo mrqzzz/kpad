@@ -432,7 +432,21 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 func (e *Editor) OpenDropdown() {
 	path := BuildCurrentPath(e, e.X-1, e.Y-2+e.Top)
-	if path != "" {
+	if path == "" {
+		bytes, err := ExecKubectlApiResources()
+		if err == nil {
+			resourceNames, apiVersions := BuildApiResourcesList(bytes)
+			keys := []string{}
+			values := []string{}
+			for i := range resourceNames {
+				val := fmt.Sprintf("%.25s", fmt.Sprintf("%-25s", resourceNames[i])) + " " + fmt.Sprintf("%.15s", fmt.Sprintf("%-15s", apiVersions[i]))
+				keys = append(keys, resourceNames[i]+":"+apiVersions[i])
+				values = append(values, val)
+			}
+			e.Dialog = NewDropdown("1", e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
+			e.Dialog.DrawAll()
+		}
+	} else {
 		// there is a path like "pod.metadata"
 		bytes, err := ExecKubectlExplain(path)
 		if err == nil {
@@ -441,27 +455,13 @@ func (e *Editor) OpenDropdown() {
 				keys := []string{}
 				values := []string{}
 				for _, child := range root.Children {
-					val := fmt.Sprintf("%.25s", fmt.Sprintf("%-25s", child.FieldName)) + ":" + fmt.Sprintf("%.15s", fmt.Sprintf("%-15s", child.FieldType))
+					val := fmt.Sprintf("%.25s", fmt.Sprintf("%-25s", child.FieldName)) + " " + fmt.Sprintf("%.15s", fmt.Sprintf("%-15s", child.FieldType))
 					keys = append(keys, child.FieldName+":")
 					values = append(values, val)
 				}
-				e.Dialog = NewDropdown(e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
+				e.Dialog = NewDropdown("2", e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
 				e.Dialog.DrawAll()
 			}
-		}
-	} else {
-		bytes, err := ExecKubectlApiResources()
-		if err != nil {
-			resourceNames, apiVersions := BuildApiResourcesList(bytes)
-			keys := []string{}
-			values := []string{}
-			for i := range resourceNames {
-				val := fmt.Sprintf("%.25s", fmt.Sprintf("%-25s", resourceNames[i])) + ":" + fmt.Sprintf("%.15s", fmt.Sprintf("%-15s", apiVersions[i]))
-				keys = append(keys, resourceNames[i]+":"+apiVersions[i])
-				values = append(values, val)
-			}
-			e.Dialog = NewDropdown(e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
-			e.Dialog.DrawAll()
 		}
 	}
 }
@@ -470,9 +470,19 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 	if e.Dialog != nil {
 		if drop, ok := e.Dialog.(*Dropdown); ok {
 			if accept {
-				st := drop.Keys[drop.SelectedIndex]
-				e.InsertAt([]rune(st), e.X-1, e.Y+e.Top-1)
-				e.CursorAdvance(len(st))
+				switch d.GetTag() {
+				case "1":
+					st := strings.Split(drop.Keys[drop.SelectedIndex], ":")
+					template := []rune(GenerateResourceTemplate(st[0], st[1]))
+					e.InsertAt(template, e.X-1, e.Y+e.Top-1)
+					e.CursorAdvance(len(template))
+				case "2":
+					st := drop.Keys[drop.SelectedIndex] + " "
+					e.InsertAt([]rune(st), e.X-1, e.Y+e.Top-1)
+					e.CursorAdvance(len(st))
+
+				}
+
 			}
 		}
 

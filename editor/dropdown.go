@@ -7,6 +7,7 @@ import (
 
 type Dropdown struct {
 	Box
+	Tag           string
 	Editor        *Editor
 	DialogParent  DialogParent
 	Keys          []string
@@ -15,7 +16,7 @@ type Dropdown struct {
 	TopIndex      int
 }
 
-func NewDropdown(e *Editor, p DialogParent, x, y, width, height int, keys []string, values []string) *Dropdown {
+func NewDropdown(tag string, e *Editor, p DialogParent, x, y, width, height int, keys []string, values []string) *Dropdown {
 	formatValuesStrings(values, width)
 
 	height = min(height, len(values))
@@ -26,6 +27,7 @@ func NewDropdown(e *Editor, p DialogParent, x, y, width, height int, keys []stri
 		y = e.ScreenHeight - height + 1
 	}
 	return &Dropdown{
+		Tag:          tag,
 		Box:          Box{x, y, width, height},
 		Editor:       e,
 		DialogParent: p,
@@ -92,4 +94,8 @@ func (d *Dropdown) DrawAll() {
 	}
 	tm.MoveCursor(d.Editor.X, d.Editor.Y)
 	tm.Flush()
+}
+
+func (d *Dropdown) GetTag() string {
+	return d.Tag
 }

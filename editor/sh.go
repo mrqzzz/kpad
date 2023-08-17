@@ -105,7 +105,7 @@ func getIndentAndTabPos(st string) (indent int, tabPos int) {
 ///////
 
 func ExecKubectlApiResources() ([]byte, error) {
-	args := []string{"api-resources"}
+	args := []string{"api-resources", "--sort-by=name"}
 	out, err := exec.Command("kubectl", args...).Output()
 	return out, err
 }
@@ -115,13 +115,15 @@ func BuildApiResourcesList(bytes []byte) (names []string, versions []string) {
 	versions = []string{}
 	sts := strings.Split(string(bytes), "\n")
 	if len(sts) > 0 {
-		idxNameFrom := strings.Index("NAME", sts[0])
-		idxNameTo := strings.Index("SHORTNAMES", sts[0])
-		idxAPiVersionFrom := strings.Index("APIVERSION", sts[0])
-		idxAPiVersionTo := strings.Index("NAMESPACED", sts[0])
+		idxNameFrom := strings.Index(sts[0], "NAME")
+		idxNameTo := strings.Index(sts[0], "SHORTNAMES")
+		idxAPiVersionFrom := strings.Index(sts[0], "APIVERSION")
+		idxAPiVersionTo := strings.Index(sts[0], "NAMESPACED")
 		for i := 1; i < len(sts); i++ {
-			names = append(names, strings.Trim(sts[i][idxNameFrom:idxNameTo], " "))
-			versions = append(versions, strings.Trim(sts[i][idxAPiVersionFrom:idxAPiVersionTo], " "))
+			if len(sts[i]) > idxAPiVersionTo {
+				names = append(names, strings.Trim(sts[i][idxNameFrom:idxNameTo], " "))
+				versions = append(versions, strings.Trim(sts[i][idxAPiVersionFrom:idxAPiVersionTo], " "))
+			}
 		}
 	}
 	return
