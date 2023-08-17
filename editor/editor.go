@@ -55,7 +55,7 @@ func (e *Editor) LoadText(txt string) {
 
 }
 
-func (e *Editor) Edit() error {
+func (e *Editor) Init() error {
 	// be sure to have a terminal
 	for cnt := 0; cnt < 500; cnt++ {
 		e.ScreenWidth = tm.Width()
@@ -70,13 +70,13 @@ func (e *Editor) Edit() error {
 	e.Top = 0
 	e.X = 1
 	e.Y = 1
+	return nil
+}
 
+func (e *Editor) Edit() error {
 	tm.Clear() // Clear current screen
-
 	e.DrawAll()
-
 	keyboard.Listen(e.ListenKeys)
-
 	return nil
 }
 
@@ -431,16 +431,48 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 }
 
 func (e *Editor) OpenDropdown() {
-	e.Dialog = NewDropdown(e, e, e.X, e.Y+1, 10, 3, []string{"k1", "k2", "k3", "k4", "k5", "k6"}, []string{"ああああak1", "ak2", "ak3", "ak4", "ak5", "ak6"})
-	e.Dialog.DrawAll()
-
+	path := BuildCurrentPath(e, e.X-1, e.Y-2+e.Top)
+	if path != "" {
+		// there is a path like "pod.metadata"
+		bytes, err := ExecKubectlExplain(path)
+		if err == nil {
+			root := BuildExplainFieldsTree(bytes)
+			if root != nil {
+				keys := []string{}
+				values := []string{}
+				for _, child := range root.Children {
+					val := fmt.Sprintf("%.25s", fmt.Sprintf("%-25s", child.FieldName)) + ":" + fmt.Sprintf("%.15s", fmt.Sprintf("%-15s", child.FieldType))
+					keys = append(keys, child.FieldName+":")
+					values = append(values, val)
+				}
+				e.Dialog = NewDropdown(e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
+				e.Dialog.DrawAll()
+			}
+		}
+	} else {
+		bytes, err := ExecKubectlApiResources()
+		if err != nil {
+			resourceNames, apiVersions := BuildApiResourcesList(bytes)
+			keys := []string{}
+			values := []string{}
+			for i := range resourceNames {
+				val := fmt.Sprintf("%.25s", fmt.Sprintf("%-25s", resourceNames[i])) + ":" + fmt.Sprintf("%.15s", fmt.Sprintf("%-15s", apiVersions[i]))
+				keys = append(keys, resourceNames[i]+":"+apiVersions[i])
+				values = append(values, val)
+			}
+			e.Dialog = NewDropdown(e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
+			e.Dialog.DrawAll()
+		}
+	}
 }
 
 func (e *Editor) CloseDialog(d Dialog, accept bool) {
 	if e.Dialog != nil {
 		if drop, ok := e.Dialog.(*Dropdown); ok {
 			if accept {
-				e.InsertAt([]rune(drop.Keys[drop.SelectedIndex]), e.X-1, e.Y+e.Top-1)
+				st := drop.Keys[drop.SelectedIndex]
+				e.InsertAt([]rune(st), e.X-1, e.Y+e.Top-1)
+				e.CursorAdvance(len(st))
 			}
 		}
 

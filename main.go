@@ -7,11 +7,13 @@ import (
 
 func main() {
 
-	corporate := `123` //－23－23－23－23－23－23:
-	//a－－－－－－－－－－－－
-	//123`
+	corporate := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:`
 
 	e := editor.NewEditor(0, 0)
+	e.Init()
 	e.LoadText(corporate)
 	e.Edit()
 

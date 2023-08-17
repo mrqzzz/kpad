@@ -17,11 +17,13 @@ type Dropdown struct {
 
 func NewDropdown(e *Editor, p DialogParent, x, y, width, height int, keys []string, values []string) *Dropdown {
 	formatValuesStrings(values, width)
+
+	height = min(height, len(values))
 	if x+width > e.ScreenWidth {
 		x = e.ScreenWidth - width
 	}
-	if y+height > e.ScreenHeight {
-		y = e.ScreenHeight - height
+	if y+height > e.ScreenHeight-1 {
+		y = e.ScreenHeight - height + 1
 	}
 	return &Dropdown{
 		Box:          Box{x, y, width, height},
@@ -77,7 +79,7 @@ func (d *Dropdown) ListenKeys(key keys.Key) (stop bool, err error) {
 }
 
 func (d *Dropdown) DrawAll() {
-	for i := d.TopIndex; i < d.TopIndex+d.Height; i++ {
+	for i := d.TopIndex; i < min(d.TopIndex+d.Height, len(d.Values)); i++ {
 		st := d.Values[i]
 		if i == d.SelectedIndex {
 			st = tm.Background(st, tm.BLUE)

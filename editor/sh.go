@@ -13,8 +13,8 @@ type Node struct {
 	Children  []*Node
 }
 
-func ExecExplain(path string) ([]byte, error) {
-	args := []string{"explain", "--recursive", "deployment." + path}
+func ExecKubectlExplain(path string) ([]byte, error) {
+	args := []string{"explain", "--recursive", path}
 	out, err := exec.Command("kubectl", args...).Output()
 	return out, err
 }
@@ -87,16 +87,41 @@ func findPreviousSibling(n *Node) *Node {
 
 func getIndentAndTabPos(st string) (indent int, tabPos int) {
 	for i := 0; i < len(st); i++ {
-		if st[i:i+1] == " " {
+		if st[i] == ' ' {
 			indent++
 		} else {
 			break
 		}
 	}
 	for i := indent; i < len(st); i++ {
-		if st[i:i+1] == "\t" {
+		if st[i] == '\t' {
 			tabPos = i
 			break
+		}
+	}
+	return
+}
+
+///////
+
+func ExecKubectlApiResources() ([]byte, error) {
+	args := []string{"api-resources"}
+	out, err := exec.Command("kubectl", args...).Output()
+	return out, err
+}
+
+func BuildApiResourcesList(bytes []byte) (names []string, versions []string) {
+	names = []string{}
+	versions = []string{}
+	sts := strings.Split(string(bytes), "\n")
+	if len(sts) > 0 {
+		idxNameFrom := strings.Index("NAME", sts[0])
+		idxNameTo := strings.Index("SHORTNAMES", sts[0])
+		idxAPiVersionFrom := strings.Index("APIVERSION", sts[0])
+		idxAPiVersionTo := strings.Index("NAMESPACED", sts[0])
+		for i := 1; i < len(sts); i++ {
+			names = append(names, strings.Trim(sts[i][idxNameFrom:idxNameTo], " "))
+			versions = append(versions, strings.Trim(sts[i][idxAPiVersionFrom:idxAPiVersionTo], " "))
 		}
 	}
 	return

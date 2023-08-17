@@ -4,34 +4,42 @@ import (
 	"strings"
 )
 
-func populateDropdown(root *Node) {
-	items := []string{}
-	if root != nil {
-		for _, child := range root.Children {
-			items = append(items, child.FieldName+"   "+child.FieldType)
-		}
-
-	}
-	//drop.SetOptions(items, nil)
-}
+//func populateDropdown(root *Node) {
+//	items := []string{}
+//	if root != nil {
+//		for _, child := range root.Children {
+//			items = append(items, child.FieldName+"   "+child.FieldType)
+//		}
+//
+//	}
+//	//drop.SetOptions(items, nil)
+//}
 
 // x and y are relative to buf, not the cursor
 func BuildCurrentPath(e *Editor, x int, y int) string {
 	var path []string
+	var kind = ""
 	for i := y; i > 0; i-- {
 		fromIdx := e.findPrevLineFeed(i) + 1
 		toIdx := e.findNextLineFeed(i)
 		txt := runesJoin(e.Buf[fromIdx : toIdx+1])
 		st, x1, _ := GetLeftmostWordAtLine(txt)
-		if x1 < x && st != "" {
-			if st[len(st)-1:] == ":" {
-				st = st[:len(st)-1]
+		if st == "kind:" && x1 == 0 {
+			spl := strings.Split(string(txt), ":")
+			if len(spl) > 0 {
+				kind = strings.Trim(spl[1], " \t\n") + "."
 			}
-			path = append([]string{st}, path...)
-			x = x1
+		} else {
+			if x1 < x && st != "" {
+				if st[len(st)-1:] == ":" {
+					st = st[:len(st)-1]
+				}
+				path = append([]string{st}, path...)
+				x = x1
+			}
 		}
 	}
-	result := strings.Join(path, ".")
+	result := kind + strings.Join(path, ".")
 	return result
 }
 
