@@ -105,7 +105,7 @@ func (d *Dropdown) GetTag() string {
 func (d *Dropdown) selectMatch(match string) {
 	match = strings.ToUpper(strings.Trim(match, ":"))
 	for i := range d.Values {
-		if strings.Contains(strings.ToUpper(d.Values[i]), match) {
+		if strings.Contains(strings.ToUpper(d.Values[i]), match) && match != "" {
 			d.SelectedIndex = i
 			if d.SelectedIndex >= d.TopIndex+d.Height {
 				d.TopIndex = d.SelectedIndex - d.Height + 1

@@ -289,7 +289,7 @@ func (e *Editor) GetWordAtPos(col, row int) (word []rune, startCol, startRow, en
 	r := row
 	//find left limit
 	for {
-		if !isLetter(e.Buf[r][c]) {
+		if !isLetter(e.Buf[r][c]) && c != col {
 			break
 		}
 		startCol = c
@@ -487,9 +487,9 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 func (e *Editor) OpenDropdown() {
 	word, startCol, startRow, _, _ := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
-	if len(word) == 0 {
-		word, startCol, startRow, _, _ = e.GetWordAtPos(e.X-2, e.Y-1+e.Top)
-	}
+	//if len(word) == 0 {
+	//	word, startCol, startRow, _, _ = e.GetWordAtPos(e.X-2, e.Y-1+e.Top)
+	//}
 	path := BuildCurrentPath(e, startCol, startRow-1)
 	if path == "" {
 		bytes, err := ExecKubectlApiResources()
@@ -530,9 +530,9 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 		if drop, ok := e.Dialog.(*Dropdown); ok {
 			if accept {
 				word, startCol, _, col, row := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
-				if len(word) == 0 {
-					word, startCol, _, col, row = e.GetWordAtPos(e.X-2, e.Y-1+e.Top)
-				}
+				//if len(word) == 0 {
+				//	word, startCol, _, col, row = e.GetWordAtPos(e.X-2, e.Y-1+e.Top)
+				//}
 				delta := 0
 				if len(word) > 0 {
 					delta = e.X - 1 - startCol
@@ -540,6 +540,9 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 				for i := 0; i < len(word); i++ {
 					e.DeleteAt(col+1, row)
 					col--
+					if col < 0 {
+						break
+					}
 				}
 				e.CursorWithdraw(-delta)
 				e.MoveCursorSafe(e.X, e.Y)
