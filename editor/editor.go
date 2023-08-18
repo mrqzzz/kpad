@@ -277,9 +277,14 @@ func (e *Editor) findPrevLineFeed(fromIdx int) int {
 }
 
 func (e *Editor) GetWordAtPos(col, row int) (word []rune, startCol, startRow, endCol, endRow int) {
+	if col < 0 {
+		col = 0
+	}
 	if row > len(e.Buf)-1 {
 		return
 	}
+	startCol = col
+	startRow = row
 	c := col
 	r := row
 	//find left limit
@@ -298,6 +303,8 @@ func (e *Editor) GetWordAtPos(col, row int) (word []rune, startCol, startRow, en
 			c = len(e.Buf[r]) - 1
 		}
 	}
+	endCol = col - 1
+	endRow = row
 	c = col
 	r = row
 	//find right limit
@@ -317,9 +324,9 @@ func (e *Editor) GetWordAtPos(col, row int) (word []rune, startCol, startRow, en
 		}
 	}
 	if startRow != endRow {
-		word = runeCopyAppend(e.Buf[startRow][startCol:], e.Buf[endRow][:endCol])
+		word = runeCopyAppend(e.Buf[startRow][startCol:], e.Buf[endRow][:endCol+1])
 	} else {
-		word = runeCopy(e.Buf[startRow][startCol:endCol])
+		word = runeCopy(e.Buf[startRow][startCol : endCol+1])
 	}
 	return
 }
@@ -479,9 +486,11 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 }
 
 func (e *Editor) OpenDropdown() {
-	word, _, _, _, _ := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
-	fmt.Println(word)
-	path := BuildCurrentPath(e, e.X-1, e.Y-2+e.Top)
+	word, startCol, startRow, _, _ := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
+	if len(word) == 0 {
+		word, startCol, startRow, _, _ = e.GetWordAtPos(e.X-2, e.Y-1+e.Top)
+	}
+	path := BuildCurrentPath(e, startCol, startRow-1)
 	if path == "" {
 		bytes, err := ExecKubectlApiResources()
 		if err == nil {
@@ -493,7 +502,7 @@ func (e *Editor) OpenDropdown() {
 				keys = append(keys, resourceNames[i]+":"+apiVersions[i])
 				values = append(values, val)
 			}
-			e.Dialog = NewDropdown("1", e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
+			e.Dialog = NewDropdown("api-resources", string(word), e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
 			e.Dialog.DrawAll()
 		}
 	} else {
@@ -509,7 +518,7 @@ func (e *Editor) OpenDropdown() {
 					keys = append(keys, child.FieldName+":")
 					values = append(values, val)
 				}
-				e.Dialog = NewDropdown("2", e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
+				e.Dialog = NewDropdown("explain", string(word), e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
 				e.Dialog.DrawAll()
 			}
 		}
@@ -520,13 +529,27 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 	if e.Dialog != nil {
 		if drop, ok := e.Dialog.(*Dropdown); ok {
 			if accept {
+				word, startCol, _, col, row := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
+				if len(word) == 0 {
+					word, startCol, _, col, row = e.GetWordAtPos(e.X-2, e.Y-1+e.Top)
+				}
+				delta := 0
+				if len(word) > 0 {
+					delta = e.X - 1 - startCol
+				}
+				for i := 0; i < len(word); i++ {
+					e.DeleteAt(col+1, row)
+					col--
+				}
+				e.CursorWithdraw(-delta)
+				e.MoveCursorSafe(e.X, e.Y)
 				switch d.GetTag() {
-				case "1":
+				case "api-resources":
 					st := strings.Split(drop.Keys[drop.SelectedIndex], ":")
 					template := []rune(GenerateResourceTemplate(st[0], st[1]))
 					e.InsertAt(template, e.X-1, e.Y+e.Top-1)
 					e.CursorAdvance(len(template))
-				case "2":
+				case "explain":
 					st := drop.Keys[drop.SelectedIndex] + " "
 					e.InsertAt([]rune(st), e.X-1, e.Y+e.Top-1)
 					e.CursorAdvance(len(st))

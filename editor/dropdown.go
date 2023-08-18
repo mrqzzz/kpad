@@ -3,6 +3,7 @@ package editor
 import (
 	tm "github.com/buger/goterm"
 	"github.com/mrqzzz/keyboard/keys"
+	"strings"
 )
 
 type Dropdown struct {
@@ -16,9 +17,8 @@ type Dropdown struct {
 	TopIndex      int
 }
 
-func NewDropdown(tag string, e *Editor, p DialogParent, x, y, width, height int, keys []string, values []string) *Dropdown {
+func NewDropdown(tag, match string, e *Editor, p DialogParent, x, y, width, height int, keys, values []string) *Dropdown {
 	formatValuesStrings(values, width)
-
 	height = min(height, len(values))
 	if x+width > e.ScreenWidth {
 		x = e.ScreenWidth - width
@@ -26,7 +26,7 @@ func NewDropdown(tag string, e *Editor, p DialogParent, x, y, width, height int,
 	if y+height > e.ScreenHeight-1 {
 		y = e.ScreenHeight - height + 1
 	}
-	return &Dropdown{
+	d := &Dropdown{
 		Tag:          tag,
 		Box:          Box{x, y, width, height},
 		Editor:       e,
@@ -34,6 +34,8 @@ func NewDropdown(tag string, e *Editor, p DialogParent, x, y, width, height int,
 		Keys:         keys,
 		Values:       values,
 	}
+	d.selectMatch(match)
+	return d
 }
 
 func formatValuesStrings(values []string, maxWidth int) {
@@ -84,7 +86,7 @@ func (d *Dropdown) DrawAll() {
 	for i := d.TopIndex; i < min(d.TopIndex+d.Height, len(d.Values)); i++ {
 		st := d.Values[i]
 		if i == d.SelectedIndex {
-			st = tm.Background(st, tm.BLUE)
+			st = tm.Background(st, tm.GREEN)
 		} else {
 			st = tm.Background(st, tm.WHITE)
 		}
@@ -98,4 +100,16 @@ func (d *Dropdown) DrawAll() {
 
 func (d *Dropdown) GetTag() string {
 	return d.Tag
+}
+
+func (d *Dropdown) selectMatch(match string) {
+	match = strings.ToUpper(strings.Trim(match, ":"))
+	for i := range d.Values {
+		if strings.Contains(strings.ToUpper(d.Values[i]), match) {
+			d.SelectedIndex = i
+			if d.SelectedIndex >= d.TopIndex+d.Height {
+				d.TopIndex = d.SelectedIndex - d.Height + 1
+			}
+		}
+	}
 }

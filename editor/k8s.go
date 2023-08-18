@@ -117,6 +117,8 @@ func GetLeftmostWordAtLine(r []rune) (word string, x1 int, x2 int) {
 	return
 }
 
+// returns true for letters,numbers,UTF symbols, quotes, colons, etc.
+// returns false for spaces,tabs,line feeds
 func isLetter(r rune) bool {
 	if r == ' ' || r == '\t' || r == '\n' {
 		return false
