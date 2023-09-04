@@ -96,9 +96,9 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 		extraWidth := runesExtraWidth(e.Buf[n], -1)
 
 		var extraChar int32 = 0
-		if n < e.Top+e.ScreenHeight-1 {
-			extraChar = '\n'
-		}
+		//if n < e.Top+e.ScreenHeight-1 {
+		//	extraChar = '\n'
+		//}
 
 		// FULL PADDING
 		runes := runeRepeat('.', max(e.ScreenWidth-extraWidth, len(e.Buf[n])), extraChar)
@@ -477,8 +477,8 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			} else {
 				e.DrawAll()
 			}
-			e.MoveCursorSafe(e.X, e.Y)
-			tm.Flush()
+			//e.MoveCursorSafe(e.X, e.Y)
+			//tm.Flush()
 		}
 	}
 
