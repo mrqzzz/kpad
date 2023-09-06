@@ -96,6 +96,8 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 		extraWidth := runesExtraWidth(e.Buf[n], -1)
 
 		var extraChar int32 = 0
+
+		// THIS CAUSES A CR IN WINDOWS:
 		//if n < e.Top+e.ScreenHeight-1 {
 		//	extraChar = '\n'
 		//}
@@ -368,7 +370,11 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
 	} else if key.Code == keys.CtrlAt {
-		e.OpenDropdown()
+		word, _, x2 := GetLeftmostWordAtLine(e.Buf[e.Y-1+e.Top])
+		if len(word) == 0 || e.X-1 <= x2 {
+			e.OpenDropdown()
+		}
+
 	} else if key.Code == keys.End {
 		e.X = e.ScreenWidth
 		e.MoveCursorSafe(e.X, e.Y)
@@ -438,6 +444,19 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		// EDIT
 		if key.Code == keys.Enter {
 			key.Runes = []rune{'\n'}
+			_, x, _ := GetLeftmostWordAtLine(e.Buf[e.Y-1+e.Top])
+			for i := 0; i < x; i++ {
+				key.Runes = append(key.Runes, ' ')
+			}
+
+			//runes := e.Buf[e.Y-1+e.Top]
+			//for i := 0; i < len(runes); i++ {
+			//	if runes[i] == ' ' {
+			//		key.Runes = append(key.Runes, ' ')
+			//	} else {
+			//		break
+			//	}
+			//}
 		}
 		if key.Code == keys.Tab {
 			key.Runes = []rune{' ', ' '}
@@ -490,7 +509,7 @@ func (e *Editor) OpenDropdown() {
 	//if len(word) == 0 {
 	//	word, startCol, startRow, _, _ = e.GetWordAtPos(e.X-2, e.Y-1+e.Top)
 	//}
-	path := BuildCurrentPath(e, startCol, startRow-1)
+	path, existingSiblings := BuildCurrentPath(e, startCol, startRow-1)
 	if path == "" {
 		bytes, err := ExecKubectlApiResources()
 		if err == nil {
@@ -502,7 +521,7 @@ func (e *Editor) OpenDropdown() {
 				keys = append(keys, resourceNames[i]+":"+apiVersions[i])
 				values = append(values, val)
 			}
-			e.Dialog = NewDropdown("api-resources", string(word), e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
+			e.Dialog = NewDropdown("api-resources", string(word), e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values, existingSiblings)
 			e.Dialog.DrawAll()
 		}
 	} else {
@@ -515,10 +534,10 @@ func (e *Editor) OpenDropdown() {
 				values := []string{}
 				for _, child := range root.Children {
 					val := fmt.Sprintf("%.25s", fmt.Sprintf("%-25s", child.FieldName)) + " " + fmt.Sprintf("%.15s", fmt.Sprintf("%-15s", child.FieldType))
-					keys = append(keys, child.FieldName+":")
+					keys = append(keys, child.FieldName)
 					values = append(values, val)
 				}
-				e.Dialog = NewDropdown("explain", string(word), e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values)
+				e.Dialog = NewDropdown("explain", string(word), e, e, e.X, e.Y+1, min(40, e.ScreenWidth), min(16, e.ScreenHeight), keys, values, existingSiblings)
 				e.Dialog.DrawAll()
 			}
 		}
@@ -530,9 +549,15 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 		if drop, ok := e.Dialog.(*Dropdown); ok {
 			if accept {
 				word, startCol, _, col, row := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
-				//if len(word) == 0 {
-				//	word, startCol, _, col, row = e.GetWordAtPos(e.X-2, e.Y-1+e.Top)
-				//}
+
+				// if there is a space after the word, delete it because it will be added inserting the completion
+				runes := e.Buf[e.Y-1+e.Top]
+				if len(runes) > col+1 && runes[col+1] == ' ' {
+					col++
+					word = append(word, ' ')
+				}
+
+				// delete each rune
 				delta := 0
 				if len(word) > 0 {
 					delta = e.X - 1 - startCol
@@ -553,7 +578,7 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 					e.InsertAt(template, e.X-1, e.Y+e.Top-1)
 					e.CursorAdvance(len(template))
 				case "explain":
-					st := drop.Keys[drop.SelectedIndex] + " "
+					st := drop.Keys[drop.SelectedIndex] + ": "
 					e.InsertAt([]rune(st), e.X-1, e.Y+e.Top-1)
 					e.CursorAdvance(len(st))
 

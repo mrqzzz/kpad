@@ -13,11 +13,12 @@ type Dropdown struct {
 	DialogParent  DialogParent
 	Keys          []string
 	Values        []string
+	GrayedKeys    map[string]interface{}
 	SelectedIndex int
 	TopIndex      int
 }
 
-func NewDropdown(tag, match string, e *Editor, p DialogParent, x, y, width, height int, keys, values []string) *Dropdown {
+func NewDropdown(tag, match string, e *Editor, p DialogParent, x, y, width, height int, keys, values []string, grayedKeys map[string]interface{}) *Dropdown {
 	formatValuesStrings(values, width)
 	height = min(height, len(values))
 	if x+width > e.ScreenWidth {
@@ -33,6 +34,7 @@ func NewDropdown(tag, match string, e *Editor, p DialogParent, x, y, width, heig
 		DialogParent: p,
 		Keys:         keys,
 		Values:       values,
+		GrayedKeys:   grayedKeys,
 	}
 	d.selectMatch(match)
 	return d
@@ -90,7 +92,13 @@ func (d *Dropdown) DrawAll() {
 		} else {
 			st = tm.Background(st, tm.WHITE)
 		}
-		st = tm.Color(st, tm.BLACK)
+		if d.GrayedKeys[d.Keys[i]] != nil {
+			st = tm.Color(st, tm.BLUE)
+		} else {
+			st = tm.Color(st, tm.BLACK)
+
+		}
+
 		tm.MoveCursor(d.X, d.Y+i-d.TopIndex)
 		tm.Print(st)
 	}
@@ -110,6 +118,7 @@ func (d *Dropdown) selectMatch(match string) {
 			if d.SelectedIndex >= d.TopIndex+d.Height {
 				d.TopIndex = d.SelectedIndex - d.Height + 1
 			}
+			break
 		}
 	}
 }

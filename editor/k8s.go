@@ -19,39 +19,80 @@ import (
 func GenerateResourceTemplate(resourceName string, resourceVersion string) string {
 	st := `apiVersion: %s
 kind: %s
-metadata:
-  
-spec:
-  `
+metadata:`
 	return fmt.Sprintf(st, resourceVersion, resourceName)
 }
 
-// x and y are relative to buf, not the cursor
-func BuildCurrentPath(e *Editor, x int, y int) string {
+// BuildCurrentPath returns the k8s yaml path ("deployment.spec.template.spec") from the cursor up
+// also returns the possible same-level siblings.
+// The passed x and y are relative to buf, not the cursor
+func BuildCurrentPath(e *Editor, x int, y int) (stringPath string, existingSiblings map[string]interface{}) {
 	var path []string
 	var kind = ""
-	for i := y; i > 0; i-- {
+	xx := x
+	existingSiblings = make(map[string]interface{})
+
+	// build the path
+	for i := y; i >= 0; i-- {
 		fromIdx := e.findPrevLineFeed(i) + 1
 		toIdx := e.findNextLineFeed(i)
 		txt := runesJoin(e.Buf[fromIdx : toIdx+1])
 		st, x1, _ := GetLeftmostWordAtLine(txt)
-		if st == "kind:" && x1 == 0 {
+		if strings.HasPrefix(st, "---") {
+			break
+		}
+		if kind == "" && st == "kind:" && x1 == 0 {
 			spl := strings.Split(string(txt), ":")
 			if len(spl) > 0 {
 				kind = strings.Trim(spl[1], " \t\n") + "."
 			}
 		} else {
-			if x1 < x && st != "" {
+			if x1 < xx && st != "" {
 				if st[len(st)-1:] == ":" {
 					st = st[:len(st)-1]
 				}
 				path = append([]string{st}, path...)
-				x = x1
+				xx = x1
 			}
 		}
 	}
-	result := kind + strings.Join(path, ".")
-	return result
+	stringPath = kind + strings.Join(path, ".")
+
+	// build the existingSiblings list, moving up
+	for i := y; i >= 0; i-- {
+		fromIdx := e.findPrevLineFeed(i) + 1
+		toIdx := e.findNextLineFeed(i)
+		txt := runesJoin(e.Buf[fromIdx : toIdx+1])
+		st, x1, _ := GetLeftmostWordAtLine(txt)
+		if x1 < x {
+			break
+		}
+		if x1 == x && st != "" {
+			if st[len(st)-1:] == ":" {
+				st = st[:len(st)-1]
+			}
+			existingSiblings[st] = true
+		}
+	}
+
+	// build the existingSiblings list, moving down
+	for i := y + 1; i < len(e.Buf); i++ {
+		fromIdx := e.findPrevLineFeed(i) + 1
+		toIdx := e.findNextLineFeed(i)
+		txt := runesJoin(e.Buf[fromIdx : toIdx+1])
+		st, x1, _ := GetLeftmostWordAtLine(txt)
+		if x1 < x {
+			break
+		}
+		if x1 == x && st != "" {
+			if st[len(st)-1:] == ":" {
+				st = st[:len(st)-1]
+			}
+			existingSiblings[st] = true
+		}
+	}
+
+	return stringPath, existingSiblings
 }
 
 //func getCurrentWordSelection(txt string, selPos int) (selStart int, selEnd int) {
