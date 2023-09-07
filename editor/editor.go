@@ -334,6 +334,35 @@ func (e *Editor) GetWordAtPos(col, row int) (word []rune, startCol, startRow, en
 	return
 }
 
+func (e *Editor) GetNextWord(col, row int, increment int) (advancements int) {
+	insideWord := true
+	for {
+		onLetter := isLetter(e.Buf[row][col])
+		if !insideWord && onLetter {
+			return
+		}
+		if !onLetter {
+			insideWord = false
+		}
+		col += increment
+		if col >= len(e.Buf[row]) {
+			col = 0
+			row += increment
+			if row >= len(e.Buf) || row < 0 {
+				return
+			}
+		}
+		if col < 0 {
+			row += increment
+			if row < 0 {
+				return
+			}
+			col = len(e.Buf[row]) - 1
+		}
+		advancements += increment
+	}
+}
+
 func (e *Editor) MoveCursorSafe(x int, y int) {
 	if y > len(e.Buf)-e.Top {
 		y = len(e.Buf) - e.Top
@@ -420,26 +449,32 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			e.MoveCursorSafe(e.X, e.Y)
 			tm.Flush()
 		}
+	} else if key.Code == keys.Left && key.AltPressed {
+		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, -1)
+		e.CursorWithdraw(advences)
+		e.MoveCursorSafe(e.X, e.Y)
+		tm.Flush()
 	} else if key.Code == keys.Left {
 		e.CursorWithdraw(-1)
 		e.MoveCursorSafe(e.X, e.Y)
-		//e.MoveCursorSafe(e.X, e.Y)
+		tm.Flush()
+	} else if key.Code == keys.Right && key.AltPressed {
+		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, 1)
+		e.CursorAdvance(advences)
+		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
 	} else if key.Code == keys.Right {
 		e.CursorAdvance(1)
 		e.MoveCursorSafe(e.X, e.Y)
-		//e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
 	} else if key.Code == keys.Backspace {
 		withdraws, _ := e.DeleteAt(e.X-1, e.Y+e.Top-1)
 		e.CursorWithdraw(withdraws)
 		e.MoveCursorSafe(e.X, e.Y)
-		//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
 		e.DrawAll()
 	} else if key.Code == keys.CtrlD {
 		e.DeleteRow(e.Y + e.Top - 1)
 		e.MoveCursorSafe(e.X, e.Y)
-		//e.DrawRows(e.Top+e.Y-1, e.Top+e.Y+rowsToRedraw)
 		e.DrawAll()
 	} else {
 		// EDIT
