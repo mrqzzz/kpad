@@ -393,6 +393,8 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		return e.Dialog.ListenKeys(key)
 	}
 
+	fmt.Println(key)
+
 	if key.Code == keys.CtrlC {
 		return true, nil // Stop listener by returning true on Ctrl+C
 	} else if key.Code == keys.Home {

@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/buger/goterm v1.0.4
-	github.com/mrqzzz/keyboard v0.0.0-20230816095546-7887158e165b
+	github.com/mrqzzz/keyboard v0.0.0-20230907153142-9f301aef8e29
 	github.com/stretchr/testify v1.8.4
 )
 

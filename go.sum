@@ -31,6 +31,8 @@ github.com/mattn/go-runewidth v0.0.13 h1:lTGmDsbAYt5DmK6OnoV7EuIF1wEIFAcxld6ypU4
 github.com/mattn/go-runewidth v0.0.13/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/mrqzzz/keyboard v0.0.0-20230816095546-7887158e165b h1:Et9o723CVG72w4BKNC6GVwhwreaoRJEhnHgrdkpMUuY=
 github.com/mrqzzz/keyboard v0.0.0-20230816095546-7887158e165b/go.mod h1:KB9yw12ejuGNBj8nEHmRxERJdBJfbpWeHTPHrqL9Jh0=
+github.com/mrqzzz/keyboard v0.0.0-20230907153142-9f301aef8e29 h1:ZhKtxOctz1QkvAAPwYENm/MX8ulpzD1RmyDrnP2aCTo=
+github.com/mrqzzz/keyboard v0.0.0-20230907153142-9f301aef8e29/go.mod h1:KB9yw12ejuGNBj8nEHmRxERJdBJfbpWeHTPHrqL9Jh0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pterm/pterm v0.12.27/go.mod h1:PhQ89w4i95rhgE+xedAoqous6K9X+r6aSOI2eFF7DZI=
