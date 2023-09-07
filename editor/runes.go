@@ -82,7 +82,7 @@ func runeCopyAppend(runes1 []rune, runes2 []rune) []rune {
 	return res
 }
 
-// return the Terminal emulator Char width of the UTF symbol
+// return the Terminal emulator Char display width of the UTF symbol
 //
 //	"a"  -> 1
 //	"あ" -> 2

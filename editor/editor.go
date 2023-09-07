@@ -92,22 +92,18 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 			break
 		}
 
-		ln := len(e.Buf[n])
-		extraWidth := runesExtraWidth(e.Buf[n], -1)
+		runes := runeCopy(e.Buf[n])
 
-		var extraChar int32 = 0
+		l := len(runes)
+		if n < toIdx && l+runesExtraWidth(runes, -1) >= e.ScreenWidth-1 && runes[l-1] != '\n' {
+			runes = append(runes, '\n')
+		}
 
-		// THIS CAUSES A CR IN WINDOWS:
-		//if n < e.Top+e.ScreenHeight-1 {
-		//	extraChar = '\n'
-		//}
-
-		// FULL PADDING
-		runes := runeRepeat('.', max(e.ScreenWidth-extraWidth, len(e.Buf[n])), extraChar)
-		copy(runes, e.Buf[n])
-
-		if runes[ln-1] == '\n' {
-			runes[ln-1] = ' '
+		if n == toIdx {
+			l := len(runes)
+			if runes[l-1] == '\n' {
+				runes = runes[0 : l-1]
+			}
 		}
 
 		st := string(runes)
@@ -159,16 +155,21 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 			row2 := e.findNextLineFeed(row)
 			// get the string from the cursor (at the beginning of line), down to the next \n:
 			st := runesJoin(e.Buf[row : row2+1])
-			// remove the block:
 			e.Buf = append(e.Buf[:row], e.Buf[row2+1:]...)
+
+			extraWithdraw := 0
+			// if the last rune from the previous row is a \n , then there is an extra withdraw
+			if e.Buf[row-1][len(e.Buf[row-1])-1] == '\n' {
+				extraWithdraw = -1
+			}
+
 			// remove last rune from the previous line
 			if len(e.Buf[row-1]) > 0 {
 				e.Buf[row-1] = e.Buf[row-1][:len(e.Buf[row-1])-1]
 			}
 			// calculate how many cursor withdraws
 			emptySpaces := e.ScreenWidth - len(e.Buf[row-1]) - runesExtraWidth(e.Buf[row-1], -1)
-			numWithdraws = -runesToCover(st, emptySpaces) - 1
-			numWithdraws = -runesToCover(st, emptySpaces) - 1
+			numWithdraws = -runesToCover(st, emptySpaces) + extraWithdraw
 			//numWithdraws = -min(w1, w2) - 1
 			// insert the string at the end of the previous row
 			_, rowsToRedraw = e.InsertAt(st, len(e.Buf[row-1]), row-1)
@@ -375,7 +376,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			e.OpenDropdown()
 		}
 
-	} else if key.Code == keys.End {
+	} else if key.Code == keys.End || key.Code == 91 && key.AltPressed {
 		e.X = e.ScreenWidth
 		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
