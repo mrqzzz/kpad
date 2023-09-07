@@ -2,11 +2,12 @@ package editor
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	tm "github.com/buger/goterm"
 	"github.com/mrqzzz/keyboard"
 	"github.com/mrqzzz/keyboard/keys"
-	"strings"
-	"time"
 )
 
 type Editor struct {
@@ -106,7 +107,7 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 			}
 		}
 
-		st := string(runes)
+		st := string(runes) + "\r" // FOR WINDOWS
 
 		// COLORIZE
 		st = strings.ReplaceAll(st, ":", tm.Color(":", tm.BLUE))
@@ -393,7 +394,12 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		return e.Dialog.ListenKeys(key)
 	}
 
-	fmt.Println(key)
+	tm.MoveCursor(1, e.ScreenHeight)
+	tm.Print(fmt.Sprint(key.AltPressed) + "," + string(key.Runes) + "," + key.Code.String() + "                  ")
+	tm.MoveCursor(e.X, e.Y)
+	tm.Flush()
+
+	//fmt.Println(key)
 
 	if key.Code == keys.CtrlC {
 		return true, nil // Stop listener by returning true on Ctrl+C
@@ -401,7 +407,8 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.X = 1
 		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
-	} else if key.Code == keys.CtrlAt {
+	} else if key.Code == keys.CtrlK || key.Code == keys.CtrlAt {
+		fmt.Println("DIALOG!")
 		word, _, x2 := GetLeftmostWordAtLine(e.Buf[e.Y-1+e.Top])
 		if len(word) == 0 || e.X-1 <= x2 {
 			e.OpenDropdown()
