@@ -2,6 +2,7 @@ package editor
 
 import (
 	"os/exec"
+	"runtime"
 	"strings"
 )
 
@@ -127,4 +128,8 @@ func BuildApiResourcesList(bytes []byte) (names []string, versions []string) {
 		}
 	}
 	return
+}
+
+func IsWindows() bool {
+	return strings.HasPrefix(runtime.GOOS, "windows")
 }

@@ -392,6 +392,7 @@ func (e *Editor) DeleteRow(idx int) {
 // CTRL + K or SPACE : kubectl explain
 // CTRL + D delete row
 // HOME/END PGUP/PGDOWN
+// ALT + BACKSPACE : forward delete
 
 func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
@@ -412,7 +413,9 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.X = 1
 		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
-	} else if key.Code == keys.CtrlK || key.Code == keys.CtrlAt {
+	} else if key.Code == keys.CtrlK || (key.Code == keys.CtrlAt && !IsWindows()) {
+		// Windows: keys.CtrlAt = Ctrl+Z
+		// Mac: keys.CtrlAt = Ctrl+SPACE
 		word, _, x2 := GetLeftmostWordAtLine(e.Buf[e.Y-1+e.Top])
 		if len(word) == 0 || e.X-1 <= x2 {
 
@@ -486,6 +489,13 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.CursorAdvance(1)
 		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
+	} else if key.Code == keys.Backspace && key.AltPressed {
+		if e.Buf[e.Y+e.Top-1][e.X-1] != '\n' {
+			e.DeleteAt(e.X, e.Y+e.Top-1)
+			e.CursorWithdraw(0)
+			e.MoveCursorSafe(e.X, e.Y)
+			e.DrawAll()
+		}
 	} else if key.Code == keys.Backspace {
 		withdraws, _ := e.DeleteAt(e.X-1, e.Y+e.Top-1)
 		e.CursorWithdraw(withdraws)
