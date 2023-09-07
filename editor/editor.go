@@ -388,16 +388,21 @@ func (e *Editor) DeleteRow(idx int) {
 	}
 }
 
+// CTRL + Z/X or A/E : prev/next word
+// CTRL + K or SPACE : kubectl explain
+// CTRL + D delete row
+// HOME/END PGUP/PGDOWN
+
 func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 	if e.Dialog != nil {
 		return e.Dialog.ListenKeys(key)
 	}
 
-	tm.MoveCursor(1, e.ScreenHeight)
-	tm.Print(fmt.Sprint(key.AltPressed) + "," + string(key.Runes) + "," + key.Code.String() + "                  ")
-	tm.MoveCursor(e.X, e.Y)
-	tm.Flush()
+	//tm.MoveCursor(1, e.ScreenHeight)
+	//tm.Print(fmt.Sprint(key.AltPressed) + "," + string(key.Runes) + "," + strconv.Itoa(int(key.Code)) + "                  ")
+	//tm.MoveCursor(e.X, e.Y)
+	//tm.Flush()
 
 	//fmt.Println(key)
 
@@ -408,9 +413,14 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
 	} else if key.Code == keys.CtrlK || key.Code == keys.CtrlAt {
-		fmt.Println("DIALOG!")
 		word, _, x2 := GetLeftmostWordAtLine(e.Buf[e.Y-1+e.Top])
 		if len(word) == 0 || e.X-1 <= x2 {
+
+			tm.MoveCursor(1, e.ScreenHeight)
+			tm.Print("kubectl...")
+			tm.MoveCursor(e.X, e.Y)
+			tm.Flush()
+
 			e.OpenDropdown()
 		}
 
@@ -458,7 +468,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			e.MoveCursorSafe(e.X, e.Y)
 			tm.Flush()
 		}
-	} else if key.Code == keys.Left && key.AltPressed {
+	} else if key.Code == keys.Left && key.AltPressed || key.Code == keys.CtrlA || key.Code == keys.CtrlZ {
 		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, -1)
 		e.CursorWithdraw(advences)
 		e.MoveCursorSafe(e.X, e.Y)
@@ -467,7 +477,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.CursorWithdraw(-1)
 		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
-	} else if key.Code == keys.Right && key.AltPressed {
+	} else if key.Code == keys.Right && key.AltPressed || key.Code == keys.CtrlE || key.Code == keys.CtrlX {
 		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, 1)
 		e.CursorAdvance(advences)
 		e.MoveCursorSafe(e.X, e.Y)
