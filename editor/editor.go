@@ -107,16 +107,40 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 			}
 		}
 
-		st := string(runes) + "\r" // FOR WINDOWS
-
 		// COLORIZE
-		st = strings.ReplaceAll(st, ":", tm.Color(":", tm.BLUE))
+		st := colorize(runes)
+
+		st = st + "\r" // FOR WINDOWS
 
 		tm.Print(st)
 
 	}
 	e.MoveCursorSafe(e.X, e.Y)
 	tm.Flush()
+}
+
+func colorize(r []rune) string {
+	st := string(r)
+
+	// fields at the beginning of the line. e.g.: "metadata:"
+	_, x1, x2 := GetLeftmostWordAtLine(r)
+	if x2 > x1 && r[x2-1] == ':' {
+		isField := true
+		for i := x1; i < x2-1; i++ {
+			if !isAlphanumeric(r[i]) {
+				isField = false
+				break
+			}
+		}
+		if isField {
+			st = tm.HighlightRegion(st, x1, x2-1, tm.BLUE)
+		}
+	}
+
+	// all colons:
+	st = strings.ReplaceAll(st, ":", tm.Color(":", tm.MAGENTA))
+
+	return st
 }
 
 func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, rowsPushedDown int) {

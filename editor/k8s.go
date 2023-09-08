@@ -166,3 +166,8 @@ func isLetter(r rune) bool {
 	}
 	return true
 }
+
+// returns true for alphanumeric characters only , '-' ,  '.'  ,  '/'
+func isAlphanumeric(r rune) bool {
+	return (r >= 45 && r <= 57) || (r >= 65 && r <= 90) || (r >= 97 && r <= 122) || r == 46
+}
