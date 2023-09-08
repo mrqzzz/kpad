@@ -417,8 +417,18 @@ func (e *Editor) DeleteRow(idx int) {
 // CTRL + D delete row
 // HOME/END PGUP/PGDOWN
 // ALT + BACKSPACE : forward delete
+// NOTE:
+// Windows: keys.CtrlAt = Ctrl+Z
+// Mac: keys.CtrlAt = Ctrl+SPACE
 
 func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
+
+	isWindows := IsWindows()
+
+	CTRLz := keys.CtrlZ
+	if isWindows {
+		CTRLz = keys.CtrlAt
+	}
 
 	if e.Dialog != nil {
 		return e.Dialog.ListenKeys(key)
@@ -437,9 +447,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.X = 1
 		e.MoveCursorSafe(e.X, e.Y)
 		tm.Flush()
-	} else if key.Code == keys.CtrlK || (key.Code == keys.CtrlAt && !IsWindows()) {
-		// Windows: keys.CtrlAt = Ctrl+Z
-		// Mac: keys.CtrlAt = Ctrl+SPACE
+	} else if key.Code == keys.CtrlK || (key.Code == keys.CtrlAt && !isWindows) {
 		word, _, x2 := GetLeftmostWordAtLine(e.Buf[e.Y-1+e.Top])
 		if len(word) == 0 || e.X-1 <= x2 {
 
@@ -495,7 +503,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			e.MoveCursorSafe(e.X, e.Y)
 			tm.Flush()
 		}
-	} else if key.Code == keys.Left && key.AltPressed || key.Code == keys.CtrlA || key.Code == keys.CtrlZ {
+	} else if key.Code == keys.Left && key.AltPressed || key.Code == keys.CtrlA || key.Code == CTRLz {
 		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, -1)
 		e.CursorWithdraw(advences)
 		e.MoveCursorSafe(e.X, e.Y)
