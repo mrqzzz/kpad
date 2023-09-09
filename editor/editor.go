@@ -2,6 +2,7 @@ package editor
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -11,15 +12,16 @@ import (
 )
 
 type Editor struct {
-	FileName     string
-	Buf          [][]rune
-	ScreenWidth  int
-	ScreenHeight int
-	X            int
-	Y            int
-	Top          int // first visible row index
-	Dialog       Dialog
-	StatusBar    *StatusBar
+	FileName      string
+	Buf           [][]rune
+	ScreenWidth   int
+	ScreenHeight  int
+	X             int
+	Y             int
+	Top           int // first visible row index
+	Dialog        Dialog
+	StatusBar     *StatusBar
+	BufferChanged bool
 }
 
 var emptyDoc = []rune{'\n'}
@@ -30,6 +32,7 @@ func NewEditor(dummyX, dummyY int) *Editor {
 		ScreenHeight: dummyY,
 	}
 	e.StatusBar = NewStatusBar(e)
+	e.Buf = append(e.Buf, runeCopy(emptyDoc))
 	return e
 }
 
@@ -57,7 +60,33 @@ func (e *Editor) LoadText(txt string) {
 	if lastRow[len(lastRow)-1] != '\n' {
 		e.Buf[len(e.Buf)-1] = runeCopyAppend(e.Buf[len(e.Buf)-1], []rune{'\n'})
 	}
+}
 
+func (e *Editor) LoadFromFile(fileName string) {
+	e.FileName = fileName
+	bytes, err := os.ReadFile(fileName)
+	if err != nil {
+		e.StatusBar.DrawError(err.Error())
+		return
+	}
+	e.LoadText(string(bytes))
+}
+
+func (e *Editor) SaveToFile() {
+
+	f, err := os.Create(e.FileName)
+	if err != nil {
+		e.StatusBar.DrawError(err.Error())
+		return
+	}
+	defer f.Close()
+
+	//var row  []rune{}
+	for _, runes := range e.Buf {
+		_, err = f.WriteString(string(runes))
+	}
+	e.BufferChanged = false
+	e.StatusBar.DrawInfo("Saved " + e.FileName)
 }
 
 func (e *Editor) Init() error {
@@ -78,11 +107,10 @@ func (e *Editor) Init() error {
 	return nil
 }
 
-func (e *Editor) Edit() error {
+func (e *Editor) Edit() {
 	tm.Clear() // Clear current screen
 	e.DrawAll()
 	keyboard.Listen(e.ListenKeys)
-	return nil
 }
 
 func (e *Editor) DrawAll() {
@@ -455,7 +483,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 	} else if key.Code == keys.Home {
 		e.X = 1
 		e.MoveCursorSafe(e.X, e.Y)
-		e.StatusBar.Draw()
+		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.CtrlK || (key.Code == keys.CtrlAt && !isWindows) {
 		word, _, x2 := GetLeftmostWordAtLine(e.Buf[e.Y-1+e.Top])
@@ -472,7 +500,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 	} else if key.Code == keys.End || key.Code == 91 && key.AltPressed {
 		e.X = e.ScreenWidth
 		e.MoveCursorSafe(e.X, e.Y)
-		e.StatusBar.Draw()
+		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.PgUp {
 		e.Top -= e.ScreenHeight
@@ -480,7 +508,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			e.Top = 0
 		}
 		e.MoveCursorSafe(e.X, e.Y)
-		e.StatusBar.Draw()
+		e.StatusBar.DrawEditing()
 		e.DrawAll()
 	} else if key.Code == keys.PgDown {
 		e.Top += e.ScreenHeight
@@ -488,7 +516,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			e.Top = len(e.Buf) - 1
 		}
 		e.MoveCursorSafe(e.X, e.Y)
-		e.StatusBar.Draw()
+		e.StatusBar.DrawEditing()
 		e.DrawAll()
 	} else if key.Code == keys.Down {
 		if e.Y >= e.ScreenHeight && e.Top < len(e.Buf)-e.ScreenHeight {
@@ -498,13 +526,13 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			fmt.Fprintf(tm.Screen, "\033[1S")
 			e.MoveCursorSafe(e.X, e.Y)
 			e.DrawRows(e.Top+e.ScreenHeight-1, e.Top+e.ScreenHeight-1)
-			e.StatusBar.Draw()
+			e.StatusBar.DrawEditing()
 			tm.Flush()
 		}
 		if e.Y < e.ScreenHeight {
 			e.Y++
 			e.MoveCursorSafe(e.X, e.Y)
-			e.StatusBar.Draw()
+			e.StatusBar.DrawEditing()
 			tm.Flush()
 		}
 	} else if key.Code == keys.Up {
@@ -514,36 +542,36 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			fmt.Fprintf(tm.Screen, "\033[1T")
 			e.MoveCursorSafe(e.X, e.Y)
 			e.DrawRows(e.Top, e.Top)
-			e.StatusBar.Draw()
+			e.StatusBar.DrawEditing()
 			tm.Flush()
 		}
 		if e.Y > 1 {
 			e.Y--
 			e.MoveCursorSafe(e.X, e.Y)
-			e.StatusBar.Draw()
+			e.StatusBar.DrawEditing()
 			tm.Flush()
 		}
 	} else if key.Code == keys.Left && key.AltPressed || key.Code == keys.CtrlA || key.Code == CTRLz {
 		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, -1)
 		e.CursorWithdraw(advences)
 		e.MoveCursorSafe(e.X, e.Y)
-		e.StatusBar.Draw()
+		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.Left {
 		e.CursorWithdraw(-1)
 		e.MoveCursorSafe(e.X, e.Y)
-		e.StatusBar.Draw()
+		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.Right && key.AltPressed || key.Code == keys.CtrlE || key.Code == keys.CtrlX {
 		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, 1)
 		e.CursorAdvance(advences)
 		e.MoveCursorSafe(e.X, e.Y)
-		e.StatusBar.Draw()
+		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.Right {
 		e.CursorAdvance(1)
 		e.MoveCursorSafe(e.X, e.Y)
-		e.StatusBar.Draw()
+		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.Backspace && key.AltPressed {
 		if e.Buf[e.Y+e.Top-1][e.X-1] != '\n' {
@@ -561,6 +589,8 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.DeleteRow(e.Y + e.Top - 1)
 		e.MoveCursorSafe(e.X, e.Y)
 		e.DrawAll()
+	} else if key.Code == keys.CtrlS {
+		e.SaveToFile()
 	} else {
 		// EDIT
 		if key.Code == keys.Enter {
@@ -569,21 +599,14 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			for i := 0; i < x; i++ {
 				key.Runes = append(key.Runes, ' ')
 			}
-
-			//runes := e.Buf[e.Y-1+e.Top]
-			//for i := 0; i < len(runes); i++ {
-			//	if runes[i] == ' ' {
-			//		key.Runes = append(key.Runes, ' ')
-			//	} else {
-			//		break
-			//	}
-			//}
 		}
 		if key.Code == keys.Tab {
 			key.Runes = []rune{' ', ' '}
 		}
 
 		if len(key.Runes) > 0 {
+
+			e.BufferChanged = true
 
 			// some symbols
 			if key.AltPressed && key.Runes[0] == 232 {
@@ -612,13 +635,14 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 					e.DrawAll()
 				} else {
 					e.DrawRows(e.Top+e.Y-1, min(e.Top+e.Y-1+rowsPushedDown, e.Top+e.ScreenHeight-1))
-					e.StatusBar.Draw()
+					e.StatusBar.DrawEditing()
 					tm.Flush()
 				}
 
 			} else {
 				e.DrawAll()
 			}
+
 			//e.MoveCursorSafe(e.X, e.Y)
 			//tm.Flush()
 		}

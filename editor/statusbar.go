@@ -7,8 +7,10 @@ import (
 )
 
 type StatusBar struct {
-	Editor *Editor
-	State  State
+	Editor   *Editor
+	State    State
+	errorMsg string
+	infoMsg  string
 }
 
 func NewStatusBar(editor *Editor) *StatusBar {
@@ -26,7 +28,11 @@ const (
 	StateReplace
 	StateKubectl
 	StateSave
+	StateError
+	StateInfo
 )
+
+var bufChangedChar = map[bool]string{false: " ", true: "*"}
 
 func (s *StatusBar) Clear() {
 	e := s.Editor
@@ -42,13 +48,44 @@ func (s *StatusBar) Draw() {
 	case StateEdit:
 		x := e.X
 		y := e.Y + e.Top
-		stCoords := fmt.Sprintf(" %d:%d ", x, y)
+		stCoords := fmt.Sprintf("%s%d:%d ", bufChangedChar[e.BufferChanged], x, y)
 		st := fitText(e.ScreenWidth, stCoords, e.FileName)
 		tm.MoveCursor(1, e.ScreenHeight+1)
 		st = tm.Background(st, tm.BLUE)
 		tm.Print(st)
 		tm.MoveCursor(e.X, e.Y)
+	case StateError:
+		st := fitText(e.ScreenWidth, s.errorMsg, "")
+		tm.MoveCursor(1, e.ScreenHeight+1)
+		st = tm.Background(st, tm.RED)
+		tm.Print(st)
+		tm.MoveCursor(e.X, e.Y)
+	case StateInfo:
+		st := fitText(e.ScreenWidth, s.infoMsg, "")
+		tm.MoveCursor(1, e.ScreenHeight+1)
+		st = tm.Background(st, tm.GREEN)
+		tm.Print(st)
+		tm.MoveCursor(e.X, e.Y)
 	}
+}
+
+func (s *StatusBar) DrawEditing() {
+	s.State = StateEdit
+	s.Draw()
+}
+
+func (s *StatusBar) DrawInfo(infoMsg string) {
+	s.infoMsg = infoMsg
+	s.State = StateInfo
+	s.Draw()
+	tm.Flush()
+}
+
+func (s *StatusBar) DrawError(errorMsg string) {
+	s.errorMsg = errorMsg
+	s.State = StateError
+	s.Draw()
+	tm.Flush()
 }
 
 func fitText(width int, leftStr string, rightStr string) string {
