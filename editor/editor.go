@@ -11,6 +11,7 @@ import (
 )
 
 type Editor struct {
+	FileName     string
 	Buf          [][]rune
 	ScreenWidth  int
 	ScreenHeight int
@@ -18,15 +19,18 @@ type Editor struct {
 	Y            int
 	Top          int // first visible row index
 	Dialog       Dialog
+	StatusBar    *StatusBar
 }
 
 var emptyDoc = []rune{'\n'}
 
 func NewEditor(dummyX, dummyY int) *Editor {
-	return &Editor{
+	e := &Editor{
 		ScreenWidth:  dummyX,
 		ScreenHeight: dummyY,
 	}
+	e.StatusBar = NewStatusBar(e)
+	return e
 }
 
 func (e *Editor) LoadText(txt string) {
@@ -60,7 +64,7 @@ func (e *Editor) Init() error {
 	// be sure to have a terminal
 	for cnt := 0; cnt < 500; cnt++ {
 		e.ScreenWidth = tm.Width()
-		e.ScreenHeight = tm.Height()
+		e.ScreenHeight = tm.Height() - 1
 		if e.ScreenWidth == 0 && e.ScreenHeight == 0 {
 			time.Sleep(time.Millisecond * 10)
 		} else {
@@ -84,6 +88,8 @@ func (e *Editor) Edit() error {
 func (e *Editor) DrawAll() {
 	tm.Clear()
 	e.DrawRows(e.Top, e.Top+e.ScreenHeight-1)
+	e.StatusBar.Draw()
+	tm.Flush()
 }
 
 func (e *Editor) DrawRows(fromIdx int, toIdx int) {
@@ -116,7 +122,6 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 
 	}
 	e.MoveCursorSafe(e.X, e.Y)
-	tm.Flush()
 }
 
 func colorize(r []rune) string {
@@ -396,8 +401,12 @@ func (e *Editor) MoveCursorSafe(x int, y int) {
 	if x > len(runes) {
 		x = len(runes)
 	}
-	if x < 0 {
-		x = 0
+	if x < 1 {
+		x = 1
+	}
+	if y < 1 {
+		y = 1
+		e.Top--
 	}
 	e.X = x
 	e.Y = y
@@ -446,6 +455,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 	} else if key.Code == keys.Home {
 		e.X = 1
 		e.MoveCursorSafe(e.X, e.Y)
+		e.StatusBar.Draw()
 		tm.Flush()
 	} else if key.Code == keys.CtrlK || (key.Code == keys.CtrlAt && !isWindows) {
 		word, _, x2 := GetLeftmostWordAtLine(e.Buf[e.Y-1+e.Top])
@@ -462,6 +472,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 	} else if key.Code == keys.End || key.Code == 91 && key.AltPressed {
 		e.X = e.ScreenWidth
 		e.MoveCursorSafe(e.X, e.Y)
+		e.StatusBar.Draw()
 		tm.Flush()
 	} else if key.Code == keys.PgUp {
 		e.Top -= e.ScreenHeight
@@ -469,6 +480,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			e.Top = 0
 		}
 		e.MoveCursorSafe(e.X, e.Y)
+		e.StatusBar.Draw()
 		e.DrawAll()
 	} else if key.Code == keys.PgDown {
 		e.Top += e.ScreenHeight
@@ -476,18 +488,23 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			e.Top = len(e.Buf) - 1
 		}
 		e.MoveCursorSafe(e.X, e.Y)
+		e.StatusBar.Draw()
 		e.DrawAll()
 	} else if key.Code == keys.Down {
 		if e.Y >= e.ScreenHeight && e.Top < len(e.Buf)-e.ScreenHeight {
+			e.StatusBar.Clear()
 			// scroll up inserting the bottom line
 			e.Top++
 			fmt.Fprintf(tm.Screen, "\033[1S")
 			e.MoveCursorSafe(e.X, e.Y)
 			e.DrawRows(e.Top+e.ScreenHeight-1, e.Top+e.ScreenHeight-1)
+			e.StatusBar.Draw()
+			tm.Flush()
 		}
 		if e.Y < e.ScreenHeight {
 			e.Y++
 			e.MoveCursorSafe(e.X, e.Y)
+			e.StatusBar.Draw()
 			tm.Flush()
 		}
 	} else if key.Code == keys.Up {
@@ -497,29 +514,36 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			fmt.Fprintf(tm.Screen, "\033[1T")
 			e.MoveCursorSafe(e.X, e.Y)
 			e.DrawRows(e.Top, e.Top)
+			e.StatusBar.Draw()
+			tm.Flush()
 		}
 		if e.Y > 1 {
 			e.Y--
 			e.MoveCursorSafe(e.X, e.Y)
+			e.StatusBar.Draw()
 			tm.Flush()
 		}
 	} else if key.Code == keys.Left && key.AltPressed || key.Code == keys.CtrlA || key.Code == CTRLz {
 		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, -1)
 		e.CursorWithdraw(advences)
 		e.MoveCursorSafe(e.X, e.Y)
+		e.StatusBar.Draw()
 		tm.Flush()
 	} else if key.Code == keys.Left {
 		e.CursorWithdraw(-1)
 		e.MoveCursorSafe(e.X, e.Y)
+		e.StatusBar.Draw()
 		tm.Flush()
 	} else if key.Code == keys.Right && key.AltPressed || key.Code == keys.CtrlE || key.Code == keys.CtrlX {
 		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, 1)
 		e.CursorAdvance(advences)
 		e.MoveCursorSafe(e.X, e.Y)
+		e.StatusBar.Draw()
 		tm.Flush()
 	} else if key.Code == keys.Right {
 		e.CursorAdvance(1)
 		e.MoveCursorSafe(e.X, e.Y)
+		e.StatusBar.Draw()
 		tm.Flush()
 	} else if key.Code == keys.Backspace && key.AltPressed {
 		if e.Buf[e.Y+e.Top-1][e.X-1] != '\n' {
@@ -588,6 +612,8 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 					e.DrawAll()
 				} else {
 					e.DrawRows(e.Top+e.Y-1, min(e.Top+e.Y-1+rowsPushedDown, e.Top+e.ScreenHeight-1))
+					e.StatusBar.Draw()
+					tm.Flush()
 				}
 
 			} else {

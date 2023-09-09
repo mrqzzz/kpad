@@ -116,7 +116,7 @@ spec:
 `
 	e := editor.NewEditor(100, 100)
 	e.LoadText(txt)
-	st := editor.BuildCurrentPath(e, 6, 12)
+	st, _ := editor.BuildCurrentPath(e, 6, 12)
 	assert.Equal(t, "spec.containers.ports", st)
 
 }
@@ -147,19 +147,19 @@ spec:
 	e := editor.NewEditor(100, 100)
 	e.LoadText(txt)
 
-	st := editor.BuildCurrentPath(e, 3, 2)
+	st, _ := editor.BuildCurrentPath(e, 3, 2)
 	assert.Equal(t, "metadata", st)
 
-	st = editor.BuildCurrentPath(e, 5, 7)
+	st, _ = editor.BuildCurrentPath(e, 5, 7)
 	assert.Equal(t, "spec.selector.matchLabels", st)
 
-	st = editor.BuildCurrentPath(e, 11, 18)
+	st, _ = editor.BuildCurrentPath(e, 11, 18)
 	assert.Equal(t, "spec.template.spec.containers.ports.containerPort", st)
 
-	st = editor.BuildCurrentPath(e, 2, 1)
+	st, _ = editor.BuildCurrentPath(e, 2, 1)
 	assert.Equal(t, "kind", st)
 
-	st = editor.BuildCurrentPath(e, 1, 7)
+	st, _ = editor.BuildCurrentPath(e, 1, 7)
 	assert.Equal(t, "spec", st)
 
 }
