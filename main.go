@@ -15,9 +15,11 @@ func main() {
 	e := editor.NewEditor(0, 0)
 	e.Init()
 
-	for _, arg := range os.Args {
-		if arg[0:1] != "-" {
-			e.FileName = arg
+	for i, arg := range os.Args {
+		if i > 0 {
+			if arg[0:1] != "-" {
+				e.FileName = arg
+			}
 		}
 	}
 
