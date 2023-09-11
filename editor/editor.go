@@ -22,6 +22,8 @@ type Editor struct {
 	Dialog        Dialog
 	StatusBar     *StatusBar
 	BufferChanged bool
+	LastKey       keys.Key
+	IsWindows     bool
 }
 
 var emptyDoc = []rune{'\n'}
@@ -33,6 +35,7 @@ func NewEditor(dummyX, dummyY int) *Editor {
 	}
 	e.StatusBar = NewStatusBar(e)
 	e.Buf = append(e.Buf, runeCopy(emptyDoc))
+	e.IsWindows = IsWindows()
 	return e
 }
 
@@ -460,23 +463,16 @@ func (e *Editor) DeleteRow(idx int) {
 
 func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
-	isWindows := IsWindows()
+	defer func() { e.LastKey = key }()
 
 	CTRLz := keys.CtrlZ
-	if isWindows {
+	if e.IsWindows {
 		CTRLz = keys.CtrlAt
 	}
 
 	if e.Dialog != nil {
 		return e.Dialog.ListenKeys(key)
 	}
-
-	//tm.MoveCursor(1, e.ScreenHeight)
-	//tm.Print(fmt.Sprint(key.AltPressed) + "," + string(key.Runes) + "," + strconv.Itoa(int(key.Code)) + "                  ")
-	//tm.MoveCursor(e.X, e.Y)
-	//tm.Flush()
-
-	//fmt.Println(key)
 
 	if key.Code == keys.CtrlC {
 		return true, nil // Stop listener by returning true on Ctrl+C
@@ -485,15 +481,9 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
 		tm.Flush()
-	} else if key.Code == keys.CtrlK || (key.Code == keys.CtrlAt && !isWindows) {
+	} else if key.Code == keys.CtrlK || (key.Code == keys.CtrlAt && !e.IsWindows) {
 		word, _, x2 := GetLeftmostWordAtLine(e.Buf[e.Y-1+e.Top])
 		if len(word) == 0 || e.X-1 <= x2 {
-
-			tm.MoveCursor(1, e.ScreenHeight)
-			tm.Print("kubectl...")
-			tm.MoveCursor(e.X, e.Y)
-			tm.Flush()
-
 			e.OpenDropdown()
 		}
 
@@ -591,6 +581,12 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.DrawAll()
 	} else if key.Code == keys.CtrlS {
 		e.SaveToFile()
+	} else if key.Code == keys.CtrlQ {
+		// QUIT
+		if !e.BufferChanged || e.LastKey.Code == keys.CtrlQ {
+			return true, nil
+		}
+		e.StatusBar.DrawError(" THERE ARE CHANGES! Press CTRL-Q again to quit anyway")
 	} else {
 		// EDIT
 		if key.Code == keys.Enter {
@@ -653,12 +649,9 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 func (e *Editor) OpenDropdown() {
 	word, startCol, startRow, _, _ := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
-	//if len(word) == 0 {
-	//	word, startCol, startRow, _, _ = e.GetWordAtPos(e.X-2, e.Y-1+e.Top)
-	//}
 	path, existingSiblings := BuildCurrentPath(e, startCol, startRow-1)
 	if path == "" {
-		bytes, err := ExecKubectlApiResources()
+		bytes, err := e.ExecKubectlApiResources()
 		if err == nil {
 			resourceNames, apiVersions := BuildApiResourcesList(bytes)
 			keys := []string{}
@@ -673,7 +666,7 @@ func (e *Editor) OpenDropdown() {
 		}
 	} else {
 		// there is a path like "pod.metadata"
-		bytes, err := ExecKubectlExplain(path)
+		bytes, err := e.ExecKubectlExplain(path)
 		if err == nil {
 			root := BuildExplainFieldsTree(bytes)
 			if root != nil {

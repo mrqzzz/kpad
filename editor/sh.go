@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"fmt"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -14,9 +15,11 @@ type Node struct {
 	Children  []*Node
 }
 
-func ExecKubectlExplain(path string) ([]byte, error) {
+func (e *Editor) ExecKubectlExplain(path string) ([]byte, error) {
 	args := []string{"explain", "--recursive", path}
-	out, err := exec.Command("kubectl", args...).Output()
+	cmd := "kubectl"
+	e.StatusBar.DrawInfo(fmt.Sprint(cmd, args))
+	out, err := exec.Command(cmd, args...).Output()
 	return out, err
 }
 
@@ -105,9 +108,11 @@ func getIndentAndTabPos(st string) (indent int, tabPos int) {
 
 ///////
 
-func ExecKubectlApiResources() ([]byte, error) {
+func (e *Editor) ExecKubectlApiResources() ([]byte, error) {
 	args := []string{"api-resources", "--sort-by=name"}
-	out, err := exec.Command("kubectl", args...).Output()
+	cmd := "kubectl"
+	e.StatusBar.DrawInfo(fmt.Sprint(cmd, args))
+	out, err := exec.Command(cmd, args...).Output()
 	return out, err
 }
 

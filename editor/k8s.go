@@ -5,17 +5,6 @@ import (
 	"strings"
 )
 
-//func populateDropdown(root *Node) {
-//	items := []string{}
-//	if root != nil {
-//		for _, child := range root.Children {
-//			items = append(items, child.FieldName+"   "+child.FieldType)
-//		}
-//
-//	}
-//	//drop.SetOptions(items, nil)
-//}
-
 func GenerateResourceTemplate(resourceName string, resourceVersion string) string {
 	st := `apiVersion: %s
 kind: %s
@@ -47,7 +36,7 @@ func BuildCurrentPath(e *Editor, x int, y int) (stringPath string, existingSibli
 				kind = strings.Trim(spl[1], " \t\n") + "."
 			}
 		} else {
-			if x1 < xx && st != "" {
+			if x1 < xx && st != "" && st[0:1] != "#" {
 				if st[len(st)-1:] == ":" {
 					st = st[:len(st)-1]
 				}
