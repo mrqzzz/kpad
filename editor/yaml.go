@@ -25,8 +25,8 @@ func ReadFlatYaml(s string) (root *YNode, err error) {
 		}
 		sts[1] = strings.Join(sts[1:], ":")
 		root.Children = append(root.Children, &YNode{
-			Key:      sts[0],
-			Value:    sts[1],
+			Key:      strings.TrimSpace(sts[0]),
+			Value:    strings.TrimSpace(sts[1]),
 			Children: []*YNode{},
 		})
 

@@ -9,9 +9,8 @@ var (
 	KUBECTL = "kubectl"
 )
 
-const defaultConfig = `
-#############
-# flat config
+const defaultConfig = `#############
+# kpad config
 #############
 
 # "kubectl"" defines the kubectl command for completion.
@@ -21,8 +20,8 @@ const defaultConfig = `
 #
 #   kubectl: microk8s kubectl
 #
-
-kubectl: kubectl`
+kubectl: kubectl
+`
 
 func GetConfigFileName() (string, error) {
 	dir, err := os.UserHomeDir()

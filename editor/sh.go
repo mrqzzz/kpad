@@ -19,6 +19,9 @@ func (e *Editor) ExecKubectlExplain(path string) ([]byte, error) {
 	args := []string{"explain", "--recursive", path}
 	e.StatusBar.DrawInfo(fmt.Sprint(KUBECTL, args))
 	out, err := exec.Command(KUBECTL, args...).Output()
+	if err != nil {
+		e.StatusBar.DrawError(err.Error())
+	}
 	return out, err
 }
 
@@ -111,6 +114,9 @@ func (e *Editor) ExecKubectlApiResources() ([]byte, error) {
 	args := []string{"api-resources", "--sort-by=name"}
 	e.StatusBar.DrawInfo(fmt.Sprint(KUBECTL, args))
 	out, err := exec.Command(KUBECTL, args...).Output()
+	if err != nil {
+		e.StatusBar.DrawError(err.Error())
+	}
 	return out, err
 }
 

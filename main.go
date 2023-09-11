@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"mrqzzz/kpad/editor"
 	"os"
 )
@@ -14,8 +15,16 @@ func main() {
 	var err error
 
 	e := editor.NewEditor(0, 0)
-	e.InitSize()
+	err = e.InitSize()
+	if err != nil {
+		fmt.Println("ERROR", err)
+		return
+	}
 	err = e.LoadConfig()
+	if err != nil {
+		fmt.Println("ERROR", err)
+		return
+	}
 
 	for i, arg := range os.Args {
 		if i > 0 {

@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -92,21 +93,26 @@ func (e *Editor) SaveToFile() {
 	e.StatusBar.DrawInfo("Saved " + e.FileName)
 }
 
-func (e *Editor) InitSize() {
+func (e *Editor) InitSize() error {
 	// be sure to have a terminal
-	for cnt := 0; cnt < 500; cnt++ {
+	maxAttempts := 500
+	for cnt := 1; cnt <= maxAttempts; cnt++ {
 		e.ScreenWidth = tm.Width()
 		e.ScreenHeight = tm.Height() - 1
-		if e.ScreenWidth == 0 && e.ScreenHeight == 0 {
+		if e.ScreenWidth <= 0 || e.ScreenHeight <= 0 {
 			time.Sleep(time.Millisecond * 10)
 		} else {
 			break
+		}
+		if cnt == maxAttempts {
+			return errors.New("cannot initialise terminal")
 		}
 	}
 
 	e.Top = 0
 	e.X = 1
 	e.Y = 1
+	return nil
 }
 
 func (e *Editor) Edit() {
