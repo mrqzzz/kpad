@@ -15,14 +15,24 @@ type Node struct {
 	Children  []*Node
 }
 
-func (e *Editor) ExecKubectlExplain(path string) ([]byte, error) {
-	args := []string{"explain", "--recursive", path}
-	e.StatusBar.DrawInfo(fmt.Sprint(KUBECTL, args))
-	out, err := exec.Command(KUBECTL, args...).Output()
+func (e *Editor) ExecKubectl(args []string) ([]byte, error) {
+	kubectl := strings.Split(KUBECTL, " ")
+	cmd := kubectl[0]
+	args = append(kubectl[1:], args...)
+	e.StatusBar.DrawInfo(fmt.Sprint(cmd, args))
+	out, err := exec.Command(cmd, args...).Output()
 	if err != nil {
 		e.StatusBar.DrawError(err.Error())
 	}
 	return out, err
+}
+
+func (e *Editor) ExecKubectlExplain(path string) ([]byte, error) {
+	return e.ExecKubectl([]string{"explain", "--recursive", path})
+}
+
+func (e *Editor) ExecKubectlApiResources() ([]byte, error) {
+	return e.ExecKubectl([]string{"api-resources", "--sort-by=name"})
 }
 
 func BuildExplainFieldsTree(explain []byte) *Node {
@@ -109,16 +119,6 @@ func getIndentAndTabPos(st string) (indent int, tabPos int) {
 }
 
 ///////
-
-func (e *Editor) ExecKubectlApiResources() ([]byte, error) {
-	args := []string{"api-resources", "--sort-by=name"}
-	e.StatusBar.DrawInfo(fmt.Sprint(KUBECTL, args))
-	out, err := exec.Command(KUBECTL, args...).Output()
-	if err != nil {
-		e.StatusBar.DrawError(err.Error())
-	}
-	return out, err
-}
 
 func BuildApiResourcesList(bytes []byte) (names []string, versions []string) {
 	names = []string{}
