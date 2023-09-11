@@ -92,7 +92,7 @@ func (e *Editor) SaveToFile() {
 	e.StatusBar.DrawInfo("Saved " + e.FileName)
 }
 
-func (e *Editor) Init() error {
+func (e *Editor) InitSize() {
 	// be sure to have a terminal
 	for cnt := 0; cnt < 500; cnt++ {
 		e.ScreenWidth = tm.Width()
@@ -107,7 +107,6 @@ func (e *Editor) Init() error {
 	e.Top = 0
 	e.X = 1
 	e.Y = 1
-	return nil
 }
 
 func (e *Editor) Edit() {

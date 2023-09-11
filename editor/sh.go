@@ -17,9 +17,8 @@ type Node struct {
 
 func (e *Editor) ExecKubectlExplain(path string) ([]byte, error) {
 	args := []string{"explain", "--recursive", path}
-	cmd := "kubectl"
-	e.StatusBar.DrawInfo(fmt.Sprint(cmd, args))
-	out, err := exec.Command(cmd, args...).Output()
+	e.StatusBar.DrawInfo(fmt.Sprint(KUBECTL, args))
+	out, err := exec.Command(KUBECTL, args...).Output()
 	return out, err
 }
 
@@ -110,9 +109,8 @@ func getIndentAndTabPos(st string) (indent int, tabPos int) {
 
 func (e *Editor) ExecKubectlApiResources() ([]byte, error) {
 	args := []string{"api-resources", "--sort-by=name"}
-	cmd := "kubectl"
-	e.StatusBar.DrawInfo(fmt.Sprint(cmd, args))
-	out, err := exec.Command(cmd, args...).Output()
+	e.StatusBar.DrawInfo(fmt.Sprint(KUBECTL, args))
+	out, err := exec.Command(KUBECTL, args...).Output()
 	return out, err
 }
 

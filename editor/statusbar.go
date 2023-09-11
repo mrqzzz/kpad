@@ -9,8 +9,8 @@ import (
 type StatusBar struct {
 	Editor   *Editor
 	State    State
-	errorMsg string
-	infoMsg  string
+	ErrorMsg string
+	InfoMsg  string
 }
 
 func NewStatusBar(editor *Editor) *StatusBar {
@@ -55,13 +55,13 @@ func (s *StatusBar) Draw() {
 		tm.Print(st)
 		tm.MoveCursor(e.X, e.Y)
 	case StateError:
-		st := fitText(e.ScreenWidth, s.errorMsg, "")
+		st := fitText(e.ScreenWidth, s.ErrorMsg, "")
 		tm.MoveCursor(1, e.ScreenHeight+1)
 		st = tm.Background(st, tm.RED)
 		tm.Print(st)
 		tm.MoveCursor(e.X, e.Y)
 	case StateInfo:
-		st := fitText(e.ScreenWidth, s.infoMsg, "")
+		st := fitText(e.ScreenWidth, s.InfoMsg, "")
 		tm.MoveCursor(1, e.ScreenHeight+1)
 		st = tm.Background(st, tm.GREEN)
 		tm.Print(st)
@@ -75,14 +75,14 @@ func (s *StatusBar) DrawEditing() {
 }
 
 func (s *StatusBar) DrawInfo(infoMsg string) {
-	s.infoMsg = infoMsg
+	s.InfoMsg = infoMsg
 	s.State = StateInfo
 	s.Draw()
 	tm.Flush()
 }
 
 func (s *StatusBar) DrawError(errorMsg string) {
-	s.errorMsg = errorMsg
+	s.ErrorMsg = errorMsg
 	s.State = StateError
 	s.Draw()
 	tm.Flush()
