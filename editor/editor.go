@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -116,13 +117,12 @@ func (e *Editor) InitSize() error {
 }
 
 func (e *Editor) Edit() {
-	tm.Clear() // Clear current screen
 	e.DrawAll()
 	keyboard.Listen(e.ListenKeys)
 }
 
 func (e *Editor) DrawAll() {
-	tm.Clear()
+	//tm.Clear()
 	e.DrawRows(e.Top, e.Top+e.ScreenHeight-1)
 	e.StatusBar.Draw()
 	tm.Flush()
@@ -131,31 +131,41 @@ func (e *Editor) DrawAll() {
 func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 	tm.MoveCursor(1, fromIdx-e.Top+1)
 	for n := fromIdx; n <= toIdx; n++ {
-		if n >= len(e.Buf) {
-			break
-		}
+		var st string
+		if n < len(e.Buf) {
+			runes := runeCopy(e.Buf[n])
 
-		runes := runeCopy(e.Buf[n])
-
-		l := len(runes)
-		if n < toIdx && l+runesExtraWidth(runes, -1) >= e.ScreenWidth-1 && runes[l-1] != '\n' {
-			runes = append(runes, '\n')
-		}
-
-		if n == toIdx {
 			l := len(runes)
-			if runes[l-1] == '\n' {
-				runes = runes[0 : l-1]
+			if n < toIdx && l+runesExtraWidth(runes, -1) >= e.ScreenWidth-1 && runes[l-1] != '\n' {
+				runes = append(runes, '\n')
 			}
+
+			if n == toIdx {
+				l := len(runes)
+				if runes[l-1] == '\n' {
+					runes = runes[0 : l-1]
+				}
+			}
+			// COLORIZE
+			st = colorize(runes)
+		} else {
+			st = "\n"
 		}
 
-		// COLORIZE
-		st := colorize(runes)
+		var st1 string
+		var st2 string
+		i := strings.IndexByte(st, '\n')
+		if i > -1 {
+			st1 = st[:i]
+			st2 = st[i:]
+		} else {
+			st1 = st
+			st2 = ""
+		}
 
-		st = st + "\r" // FOR WINDOWS
-
-		tm.Print(st)
-
+		// string + clear to EOL + \r (\r is for windows)
+		out := st1 + "\033[0K" + st2 + "\r"
+		tm.Print(out)
 	}
 	e.MoveCursorSafe(e.X, e.Y)
 }
@@ -515,12 +525,20 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.DrawAll()
 	} else if key.Code == keys.Down {
 		if e.Y >= e.ScreenHeight && e.Top < len(e.Buf)-e.ScreenHeight {
-			e.StatusBar.Clear()
-			// scroll up inserting the bottom line
 			e.Top++
-			fmt.Fprintf(tm.Screen, "\033[1S")
+
+			// scroll up excluding the top row to prevent the backscroll buffer to fill
+			//tm.Print("\033[2;14r", "\033[1S", "\033[r")
+			tm.Print("\033[2;"+strconv.Itoa(e.ScreenHeight)+"r", "\033[1S", "\033[r")
+
+			// draw the top row
+			tm.MoveCursor(1, 1)
+			e.DrawRows(e.Top, e.Top)
+
+			// draw the new last row
 			e.MoveCursorSafe(e.X, e.Y)
 			e.DrawRows(e.Top+e.ScreenHeight-1, e.Top+e.ScreenHeight-1)
+
 			e.StatusBar.DrawEditing()
 			tm.Flush()
 		}
@@ -534,9 +552,15 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		if e.Y == 1 && e.Top > 0 {
 			// scroll down inserting the top line
 			e.Top--
-			fmt.Fprintf(tm.Screen, "\033[1T")
+
+			// scroll down
+			//tm.Print("\033[1;14r", "\033[1T", "\033[r")
+			tm.Print("\033[1T")
+
+			// draw the new top row
 			e.MoveCursorSafe(e.X, e.Y)
 			e.DrawRows(e.Top, e.Top)
+
 			e.StatusBar.DrawEditing()
 			tm.Flush()
 		}

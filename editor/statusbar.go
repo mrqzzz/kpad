@@ -48,7 +48,7 @@ func (s *StatusBar) Draw() {
 	case StateEdit:
 		x := e.X
 		y := e.Y + e.Top
-		stCoords := fmt.Sprintf("%s%d:%d ", bufChangedChar[e.BufferChanged], x, y)
+		stCoords := fmt.Sprintf("%s %d:%d ", bufChangedChar[e.BufferChanged], y, x)
 		st := fitText(e.ScreenWidth, stCoords, e.FileName)
 		tm.MoveCursor(1, e.ScreenHeight+1)
 		st = tm.Background(st, tm.BLUE)
