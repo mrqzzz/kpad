@@ -222,6 +222,8 @@ func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, 
 	_, rPushed := e.InsertAt(runeCopy(st2), 0, row+1)
 	rowsPushedDown += rPushed
 
+	e.BufferChanged = true
+
 	return len(ins), rowsPushedDown
 }
 
@@ -249,6 +251,9 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 			//numWithdraws = -min(w1, w2) - 1
 			// insert the string at the end of the previous row
 			_, rowsToRedraw = e.InsertAt(st, len(e.Buf[row-1]), row-1)
+			if numWithdraws != 0 {
+				e.BufferChanged = true
+			}
 		}
 
 	} else {
@@ -274,6 +279,7 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 			rowsToRedraw++
 		}
 		numWithdraws = -1
+		e.BufferChanged = true
 	}
 	return
 }
@@ -460,6 +466,7 @@ func (e *Editor) MoveCursorSafe(x int, y int) {
 }
 
 func (e *Editor) DeleteRow(idx int) {
+	e.BufferChanged = true
 	if len(e.Buf) == 1 {
 		e.Buf[0] = runeCopy(emptyDoc)
 	} else if idx < len(e.Buf) {
@@ -479,6 +486,25 @@ func (e *Editor) DeleteRow(idx int) {
 func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 	defer func() { e.LastKey = key }()
+
+	//e.StatusBar.DrawInfo("STRING='" + key.String() + "' CODE='" + key.Code.String() + "' ALT='" + fmt.Sprint(key.AltPressed) + "' RUNES='" + fmt.Sprintf("%v", key.Runes) + "'")
+
+	/////////////////////////////////
+	// AVOID REMOTE TERMINAL PROBLEMS
+	if strings.Contains(key.String(), "[") && key.AltPressed {
+		return false, nil
+	}
+	if len(key.Runes) > 1 && areAll(key.Runes, 127) && !key.AltPressed {
+		key.Runes = []rune{127}
+		key.Code = keys.Backspace
+	}
+	if len(key.Runes) > 1 && areAll(key.Runes, 4) && !key.AltPressed {
+		return false, nil
+	}
+	if len(key.Runes) == 1 && key.Runes[0] == 127 && key.AltPressed {
+		return false, nil
+	}
+	/////////////////////////////////
 
 	CTRLz := keys.CtrlZ
 	if e.IsWindows {
@@ -631,8 +657,6 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 		if len(key.Runes) > 0 {
 
-			e.BufferChanged = true
-
 			// some symbols
 			if key.AltPressed && key.Runes[0] == 232 {
 				key.Runes[0] = '['
@@ -667,9 +691,6 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			} else {
 				e.DrawAll()
 			}
-
-			//e.MoveCursorSafe(e.X, e.Y)
-			//tm.Flush()
 		}
 	}
 

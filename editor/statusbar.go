@@ -2,8 +2,9 @@ package editor
 
 import (
 	"fmt"
-	tm "github.com/buger/goterm"
 	"strconv"
+
+	tm "github.com/buger/goterm"
 )
 
 type StatusBar struct {
@@ -63,7 +64,7 @@ func (s *StatusBar) Draw() {
 	case StateInfo:
 		st := fitText(e.ScreenWidth, s.InfoMsg, "")
 		tm.MoveCursor(1, e.ScreenHeight+1)
-		st = tm.Background(st, tm.GREEN)
+		st = tm.Background(st, tm.CYAN)
 		tm.Print(st)
 		tm.MoveCursor(e.X, e.Y)
 	}

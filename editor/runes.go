@@ -145,3 +145,12 @@ func runesSplitToCover(r []rune, spaces int) (r1 []rune, r2 []rune) {
 	}
 	return r, []rune{}
 }
+
+func areAll(r []rune, char rune) bool {
+	for i := 0; i < len(r); i++ {
+		if r[i] != char {
+			return false
+		}
+	}
+	return true
+}
