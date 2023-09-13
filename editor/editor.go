@@ -26,6 +26,7 @@ type Editor struct {
 	BufferChanged bool
 	LastKey       keys.Key
 	IsWindows     bool
+	SearchString  string
 }
 
 var emptyDoc = []rune{'\n'}
@@ -642,6 +643,9 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			return true, nil
 		}
 		e.StatusBar.DrawError(" THERE ARE CHANGES! Press CTRL-Q again to quit anyway")
+	} else if key.Code == keys.CtrlF {
+		// FIND
+		e.OpenSearchDialog()
 	} else {
 		// EDIT
 		if key.Code == keys.Enter {
@@ -734,6 +738,11 @@ func (e *Editor) OpenDropdown() {
 	}
 }
 
+func (e *Editor) OpenSearchDialog() {
+	e.Dialog = NewSearchDialog("search", e.SearchString, e, e, 2, 2, min(20, e.ScreenWidth-4), 3)
+	e.Dialog.DrawAll()
+}
+
 func (e *Editor) CloseDialog(d Dialog, accept bool) {
 	if e.Dialog != nil {
 		if drop, ok := e.Dialog.(*Dropdown); ok {
@@ -773,11 +782,54 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 					e.CursorAdvance(len(st))
 
 				}
-
+			}
+			e.Dialog = nil
+			e.DrawAll()
+		} else if searchDialog, ok := e.Dialog.(*SearchDialog); ok {
+			e.Dialog = nil
+			if accept {
+				e.SearchString = searchDialog.SearchString
+				e.FindString(e.SearchString)
+			} else {
+				e.DrawAll()
 			}
 		}
-
 	}
-	e.Dialog = nil
+}
+
+func (e *Editor) FindString(searchString string) {
+	cnt := 0
+	var p int
+	var st string
+	for i := e.Top + e.Y - 1; i < len(e.Buf); i++ {
+		// get the whole line from the current row down to the next \n
+		n := e.findNextLineFeed(i) + 1
+		runes := runesJoin(e.Buf[i:n])
+		if cnt == 0 {
+			st = string(runes[e.X:])
+		} else {
+			st = string(runes)
+		}
+		p = strings.Index(st, searchString)
+		if p > -1 && p < e.ScreenWidth {
+			if cnt == 0 {
+				e.X = e.X + p + 1
+			} else {
+				e.X = p + 1
+			}
+			if i >= e.ScreenHeight {
+				e.Top = i - e.ScreenHeight + 1
+				e.Y = e.ScreenHeight
+			} else {
+				e.Y = e.Y + cnt
+			}
+			e.MoveCursorSafe(e.X, e.Y)
+			e.DrawAll()
+			return
+		}
+		cnt++
+	}
 	e.DrawAll()
+	e.StatusBar.DrawError("Not  found")
+	return
 }

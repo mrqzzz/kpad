@@ -49,7 +49,7 @@ func formatValuesStrings(values []string, maxWidth int) {
 		//}
 		w := runesWidth(r)
 		if maxWidth > w {
-			r = runeCopyAppend(r, runeRepeat(' ', maxWidth-w, 0))
+			r = runeCopyAppend(r, runeRepeat(' ', maxWidth-w))
 		}
 		values[i] = string(r)
 		//values[i] = fmt.Sprintf("%-"+strconv.Itoa(n)+"s", string(r))

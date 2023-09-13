@@ -23,16 +23,10 @@ func runeReplace(r []rune, search int32, replace int32) {
 }
 
 // create a rune array filled with char. if extraChar !=0, also append it, growing the array by 1
-func runeRepeat(char int32, count int, extraChar int32) []rune {
-	if extraChar != 0 {
-		count++
-	}
+func runeRepeat(char int32, count int) []rune {
 	res := make([]rune, count)
 	for i := 0; i < count; i++ {
 		res[i] = char
-	}
-	if extraChar != 0 {
-		res[count-1] = extraChar
 	}
 	return res
 }
