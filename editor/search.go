@@ -2,6 +2,7 @@ package editor
 
 import (
 	"fmt"
+
 	tm "github.com/buger/goterm"
 	"github.com/mrqzzz/keyboard/keys"
 )
@@ -43,7 +44,7 @@ func (d *SearchDialog) ListenKeys(key keys.Key) (stop bool, err error) {
 		d.SearchString = d.SearchString[:len(d.SearchString)-1]
 		d.DrawAll()
 	} else if len(key.Runes) > 0 {
-		d.SearchString += key.String()
+		d.SearchString += string(key.Runes)
 		d.DrawAll()
 	}
 	return false, nil
