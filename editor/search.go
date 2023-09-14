@@ -44,6 +44,7 @@ func (d *SearchDialog) ListenKeys(key keys.Key) (stop bool, err error) {
 		d.SearchString = d.SearchString[:len(d.SearchString)-1]
 		d.DrawAll()
 	} else if len(key.Runes) > 0 {
+		patchKey(&key)
 		d.SearchString += string(key.Runes)
 		d.DrawAll()
 	}

@@ -661,20 +661,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 		if len(key.Runes) > 0 {
 
-			// some symbols
-			if key.AltPressed && key.Runes[0] == 232 {
-				key.Runes[0] = '['
-			} else if key.AltPressed && key.Runes[0] == 521 {
-				key.Runes[0] = ']'
-			} else if key.AltPressed && key.Runes[0] == 92 {
-				key.Runes[0] = '`'
-			} else if key.AltPressed && key.Runes[0] == 242 {
-				key.Runes[0] = '@'
-			} else if key.AltPressed && key.Runes[0] == 224 {
-				key.Runes[0] = '#'
-			} else if key.AltPressed && key.Runes[0] == 101 {
-				key.Runes[0] = '€'
-			}
+			patchKey(&key)
 
 			// ADD TEXT
 			oldY := e.Y
@@ -832,4 +819,21 @@ func (e *Editor) FindString(searchString string) {
 	e.DrawAll()
 	e.StatusBar.DrawError("Not  found")
 	return
+}
+
+func patchKey(key *keys.Key) {
+	// some symbols
+	if key.AltPressed && key.Runes[0] == 232 {
+		key.Runes[0] = '['
+	} else if key.AltPressed && key.Runes[0] == 521 {
+		key.Runes[0] = ']'
+	} else if key.AltPressed && key.Runes[0] == 92 {
+		key.Runes[0] = '`'
+	} else if key.AltPressed && key.Runes[0] == 242 {
+		key.Runes[0] = '@'
+	} else if key.AltPressed && key.Runes[0] == 224 {
+		key.Runes[0] = '#'
+	} else if key.AltPressed && key.Runes[0] == 101 {
+		key.Runes[0] = '€'
+	}
 }
