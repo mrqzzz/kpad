@@ -2,6 +2,7 @@ package editor
 
 import (
 	"fmt"
+	"strconv"
 
 	tm "github.com/buger/goterm"
 	"github.com/mrqzzz/keyboard/keys"
@@ -55,8 +56,8 @@ func (d *SearchDialog) DrawAll() {
 	rBlanks := runeRepeat(' ', d.Box.Width)
 	rTitle := runeRepeat(' ', d.Box.Width)
 	copy(rTitle, []rune{' ', 'F', 'i', 'n', 'd', ':'})
-	blanks := tm.Background(string(rBlanks), tm.CYAN)
-	title := tm.Background(string(rTitle), tm.CYAN)
+	blanks := tm.Background(string(rBlanks), tm.BLUE)
+	title := tm.Background(string(rTitle), tm.BLUE)
 	for i := 0; i < d.Box.Height; i++ {
 		tm.MoveCursor(d.X, d.Y+i)
 		if i == 0 {
@@ -66,9 +67,10 @@ func (d *SearchDialog) DrawAll() {
 		}
 	}
 	tm.MoveCursor(d.Box.X+1, d.Box.Y+1)
-	tm.Print(fmt.Sprintf("%-18s", " "))
+	tm.Print(fmt.Sprintf("%-"+strconv.Itoa(d.Width-2)+"s", " "))
 	tm.MoveCursor(d.Box.X+1, d.Box.Y+1)
-	tm.Print(d.SearchString[max(0, len(d.SearchString)-18):])
+	w := max(0, len(d.SearchString)-max(0, d.Width-3))
+	tm.Print(d.SearchString[w:])
 	tm.Flush()
 }
 

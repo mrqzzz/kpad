@@ -801,13 +801,14 @@ func (e *Editor) FindString(searchString string) {
 			st = string(runes)
 		}
 		p = strings.Index(st, searchString)
-		if p > -1 && p < e.ScreenWidth {
+		offs := iifInt(cnt == 0, e.X, 0)
+		if p > -1 && p < e.ScreenWidth-offs-1 {
 			if cnt == 0 {
 				e.X = e.X + p + 1
 			} else {
 				e.X = p + 1
 			}
-			if i >= e.ScreenHeight {
+			if i >= e.ScreenHeight+e.Top {
 				e.Top = i - e.ScreenHeight + 1
 				e.Y = e.ScreenHeight
 			} else {
@@ -820,7 +821,7 @@ func (e *Editor) FindString(searchString string) {
 		cnt++
 	}
 	e.DrawAll()
-	e.StatusBar.DrawError("Not  found")
+	e.StatusBar.DrawError(fmt.Sprintf(`"%s" Not found`, e.SearchString))
 	return
 }
 

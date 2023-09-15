@@ -14,6 +14,13 @@ func max(a int, b int) int {
 	return b
 }
 
+func iifInt(exp bool, ifTrue int, ifFalse int) int {
+	if exp {
+		return ifTrue
+	}
+	return ifFalse
+}
+
 func runeReplace(r []rune, search int32, replace int32) {
 	for i := 0; i < len(r); i++ {
 		if r[i] == search {
