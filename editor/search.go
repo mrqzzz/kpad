@@ -54,9 +54,9 @@ func (d *SearchDialog) ListenKeys(key keys.Key) (stop bool, err error) {
 func (d *SearchDialog) DrawAll() {
 	rBlanks := runeRepeat(' ', d.Box.Width)
 	rTitle := runeRepeat(' ', d.Box.Width)
-	copy(rTitle, []rune{'S', 'e', 'a', 'r', 'c', 'h', ':'})
-	blanks := tm.Background(string(rBlanks), tm.BLUE)
-	title := tm.Background(string(rTitle), tm.BLUE)
+	copy(rTitle, []rune{' ', 'F', 'i', 'n', 'd', ':'})
+	blanks := tm.Background(string(rBlanks), tm.CYAN)
+	title := tm.Background(string(rTitle), tm.CYAN)
 	for i := 0; i < d.Box.Height; i++ {
 		tm.MoveCursor(d.X, d.Y+i)
 		if i == 0 {

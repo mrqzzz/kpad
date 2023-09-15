@@ -646,6 +646,9 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 	} else if key.Code == keys.CtrlF {
 		// FIND
 		e.OpenSearchDialog()
+	} else if key.Code == keys.CtrlN {
+		// FIND NEXT
+		e.FindString(e.SearchString)
 	} else {
 		// EDIT
 		if key.Code == keys.Enter {
