@@ -550,6 +550,14 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
 		tm.Flush()
+	} else if key.Code == keys.PgUp && key.AltPressed {
+		// TOP
+		e.X = 1
+		e.Y = 1
+		e.Top = 0
+		e.DrawAll()
+		e.StatusBar.DrawEditing()
+		tm.Flush()
 	} else if key.Code == keys.PgUp {
 		e.Top -= e.ScreenHeight
 		if e.Top < 0 {
@@ -558,6 +566,14 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
 		e.DrawAll()
+	} else if key.Code == keys.PgDown && key.AltPressed {
+		// BOTTOM
+		e.X = 1
+		e.Y = 1
+		e.Top = len(e.Buf) - 1
+		e.DrawAll()
+		e.StatusBar.DrawEditing()
+		tm.Flush()
 	} else if key.Code == keys.PgDown {
 		e.Top += e.ScreenHeight
 		if e.Top > len(e.Buf)-1 {
