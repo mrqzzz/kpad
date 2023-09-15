@@ -518,6 +518,22 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 	if key.Code == keys.CtrlC {
 		return true, nil // Stop listener by returning true on Ctrl+C
+	} else if key.Code == keys.CtrlT {
+		// TOP
+		e.X = 1
+		e.Y = 1
+		e.Top = 0
+		e.DrawAll()
+		e.StatusBar.DrawEditing()
+		tm.Flush()
+	} else if key.Code == keys.CtrlB {
+		// BOTTOM
+		e.X = 1
+		e.Y = 1
+		e.Top = len(e.Buf) - 1
+		e.DrawAll()
+		e.StatusBar.DrawEditing()
+		tm.Flush()
 	} else if key.Code == keys.Home {
 		e.X = 1
 		e.MoveCursorSafe(e.X, e.Y)
