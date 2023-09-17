@@ -516,7 +516,10 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		return e.Dialog.ListenKeys(key)
 	}
 
-	if key.Code == keys.CtrlC {
+	if key.Code == keys.F1 {
+		// HELP
+		e.OpenHelpDialog()
+	} else if key.Code == keys.CtrlC {
 		return true, nil // Stop listener by returning true on Ctrl+C
 	} else if key.Code == keys.CtrlT {
 		// TOP
@@ -723,6 +726,11 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 	return false, nil // Return false to continue listening
 }
 
+func (e *Editor) OpenHelpDialog() {
+	e.Dialog = NewHelpDialog("help", e, e, 2, 2, max(1, e.ScreenWidth-2), max(1, e.ScreenHeight-2))
+	e.Dialog.DrawAll()
+}
+
 func (e *Editor) OpenDropdown() {
 	word, startCol, startRow, _, _ := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
 	path, existingSiblings := BuildCurrentPath(e, startCol, startRow-1)
@@ -815,6 +823,9 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 			} else {
 				e.DrawAll()
 			}
+		} else if _, ok := e.Dialog.(*HelpDialog); ok {
+			e.Dialog = nil
+			e.DrawAll()
 		}
 	}
 }

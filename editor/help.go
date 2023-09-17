@@ -1,0 +1,113 @@
+package editor
+
+import (
+	tm "github.com/buger/goterm"
+	"github.com/mrqzzz/keyboard/keys"
+	"strings"
+)
+
+type HelpDialog struct {
+	Box
+	Tag          string
+	Editor       *Editor
+	DialogParent DialogParent
+	Help         []string
+	ScrollOffset int
+}
+
+func NewHelpDialog(tag string, e *Editor, p DialogParent, x, y, width, height int) *HelpDialog {
+	if x+width > e.ScreenWidth {
+		x = e.ScreenWidth - width
+	}
+	if y+height > e.ScreenHeight-1 {
+		y = e.ScreenHeight - height + 1
+	}
+	d := &HelpDialog{
+		Tag:          tag,
+		Box:          Box{x, y, width, height},
+		Editor:       e,
+		DialogParent: p,
+	}
+
+	st := `
+
+CTRL+space :      Kubectl autocomplete (Linux,Mac)
+CTRL+k:           Kubectl autocomplete (Windows)
+
+Arrows:           Move cursor
+PageUp:           Move up one page
+PageDown :        Move down one page
+
+ALT+PageUp,
+CTRL+t:           Move to top of document
+
+
+ALT+PageDown,
+CTRL+b:           Move to bottom of document
+
+
+CTRL+d:           Delete line
+
+
+CTRL+f:          Find 
+CTRL+n:          Find next
+`
+
+	d.Help = strings.Split(st, "\n")
+
+	return d
+}
+
+func (d *HelpDialog) ListenKeys(key keys.Key) (stop bool, err error) {
+	if key.Code == keys.CtrlC {
+		return true, nil // Stop listener by returning true on Ctrl+C
+	}
+	if key.Code == keys.Enter {
+		d.DialogParent.CloseDialog(d, true)
+	} else if key.Code == keys.Esc {
+		d.DialogParent.CloseDialog(d, false)
+	} else if key.Code == keys.PgUp {
+		d.ScrollOffset = max(0, d.ScrollOffset-d.Height-2)
+		d.DrawAll()
+	} else if key.Code == keys.PgDown {
+		d.ScrollOffset = min(len(d.Help), d.ScrollOffset+d.Height-2)
+		d.DrawAll()
+	} else if key.Code == keys.Up {
+		d.ScrollOffset = max(0, d.ScrollOffset-1)
+		d.DrawAll()
+	} else if key.Code == keys.Down {
+		d.ScrollOffset = min(len(d.Help), d.ScrollOffset+1)
+		d.DrawAll()
+	}
+	return false, nil
+}
+
+func (d *HelpDialog) DrawAll() {
+	rBlanks := runeRepeat(' ', d.Box.Width)
+	rTitle := runeRepeat(' ', d.Box.Width)
+	copy(rTitle, []rune{' ', 'H', 'e', 'l', 'p', ':'})
+	blanks := tm.Background(string(rBlanks), tm.BLUE)
+	title := tm.Background(string(rTitle), tm.BLUE)
+	for i := 0; i < d.Box.Height; i++ {
+		tm.MoveCursor(d.X, d.Y+i)
+		if i == 0 {
+			tm.Print(title)
+		} else {
+			tm.Print(blanks)
+		}
+	}
+	idx := d.ScrollOffset
+	for i := 0; i < d.Height-2; i++ {
+		tm.MoveCursor(d.Box.X+1, d.Box.Y+i+1)
+		idx++
+		if idx >= len(d.Help) {
+			break
+		}
+		tm.Print(d.Help[idx])
+	}
+	tm.Flush()
+}
+
+func (d *HelpDialog) GetTag() string {
+	return d.Tag
+}
