@@ -39,7 +39,7 @@ func (d *SearchDialog) ListenKeys(key keys.Key) (stop bool, err error) {
 	}
 	if key.Code == keys.Enter {
 		d.DialogParent.CloseDialog(d, true)
-	} else if key.Code == keys.Esc {
+	} else if key.Code == keys.Esc || key.Code == keys.CtrlF {
 		d.DialogParent.CloseDialog(d, false)
 	} else if key.Code == keys.Backspace && len(d.SearchString) > 0 {
 		d.SearchString = d.SearchString[:len(d.SearchString)-1]

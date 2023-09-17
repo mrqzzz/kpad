@@ -727,7 +727,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 }
 
 func (e *Editor) OpenHelpDialog() {
-	e.Dialog = NewHelpDialog("help", e, e, 2, 2, max(1, e.ScreenWidth-2), max(1, e.ScreenHeight-2))
+	e.Dialog = NewHelpDialog("help", e, e, 2, 2, max(1, e.ScreenWidth-2), max(1, e.ScreenHeight-3))
 	e.Dialog.DrawAll()
 }
 

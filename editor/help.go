@@ -31,29 +31,43 @@ func NewHelpDialog(tag string, e *Editor, p DialogParent, x, y, width, height in
 
 	st := `
 
-CTRL+space :      Kubectl autocomplete (Linux,Mac)
-CTRL+k:           Kubectl autocomplete (Windows)
+CTRL+space:    Kubectl autocomplete (Linux,Mac)
+CTRL+k:        Kubectl autocomplete (Windows)
 
-Arrows:           Move cursor
-PageUp:           Move up one page
-PageDown :        Move down one page
+Arrows:        Move cursor around
+Home:          Move to begin of line
+End:           Move to end of line
+PageUp:        Move up one page
+PageDown:      Move down one page
 
-ALT+PageUp,
-CTRL+t:           Move to top of document
+ALT+PageUp:
+CTRL+t:        Move to top of document
 
+ALT+PageDown:
+CTRL+b:        Move to bottom of document
 
-ALT+PageDown,
-CTRL+b:           Move to bottom of document
+CMD+Right:
+CTRL+x:        Move to next word
 
+CMD+Left:
+CTRL+z:        Move to previous word
 
-CTRL+d:           Delete line
+CTRL+d:        Delete line
 
-
-CTRL+f:          Find 
-CTRL+n:          Find next
+CTRL+f:        Find 
+CTRL+n:        Find next
 `
 
-	d.Help = strings.Split(st, "\n")
+	spl1 := strings.Split(st, "\n")
+	for i, s1 := range spl1 {
+		spl2 := strings.Split(s1, ":")
+		spl2[0] = tm.Color(spl2[0], tm.GREEN)
+		for k, _ := range spl2 {
+			spl2[k] = tm.Background(spl2[k], tm.BLUE)
+		}
+		spl1[i] = strings.Join(spl2, "")
+	}
+	d.Help = spl1
 
 	return d
 }
@@ -64,7 +78,7 @@ func (d *HelpDialog) ListenKeys(key keys.Key) (stop bool, err error) {
 	}
 	if key.Code == keys.Enter {
 		d.DialogParent.CloseDialog(d, true)
-	} else if key.Code == keys.Esc {
+	} else if key.Code == keys.Esc || key.Code == keys.F1 {
 		d.DialogParent.CloseDialog(d, false)
 	} else if key.Code == keys.PgUp {
 		d.ScrollOffset = max(0, d.ScrollOffset-d.Height-2)
