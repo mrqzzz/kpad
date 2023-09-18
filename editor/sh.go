@@ -19,7 +19,7 @@ func (e *Editor) ExecKubectl(args []string) ([]byte, error) {
 	kubectl := strings.Split(KUBECTL, " ")
 	cmd := kubectl[0]
 	args = append(kubectl[1:], args...)
-	e.StatusBar.DrawInfo(fmt.Sprint(cmd, args))
+	e.StatusBar.DrawInfo(fmt.Sprint("Executing: ", cmd, " ", args, "..."))
 	out, err := exec.Command(cmd, args...).Output()
 	if err != nil {
 		e.StatusBar.DrawError(err.Error())

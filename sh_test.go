@@ -34,7 +34,7 @@ func TestGetLeftmostWordAtLine(t *testing.T) {
 x`
 
 	e := editor.NewEditor(100, 100)
-	e.LoadText(txt)
+	e.StringToBuf(txt)
 	st, x1, x2 := editor.GetLeftmostWordAtLine(e.Buf[0])
 	assert.Equal(t, "row0:", st)
 	assert.Equal(t, 0, x1)
@@ -115,7 +115,7 @@ spec:
          
 `
 	e := editor.NewEditor(100, 100)
-	e.LoadText(txt)
+	e.StringToBuf(txt)
 	st, _ := editor.BuildCurrentPath(e, 6, 12)
 	assert.Equal(t, "spec.containers.ports", st)
 
@@ -145,7 +145,7 @@ spec:
          
 `
 	e := editor.NewEditor(100, 100)
-	e.LoadText(txt)
+	e.StringToBuf(txt)
 
 	st, _ := editor.BuildCurrentPath(e, 3, 2)
 	assert.Equal(t, "metadata", st)

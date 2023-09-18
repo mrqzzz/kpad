@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -42,7 +43,7 @@ func NewEditor(dummyX, dummyY int) *Editor {
 	return e
 }
 
-func (e *Editor) LoadText(txt string) {
+func (e *Editor) StringToBuf(txt string) {
 	// prepare buffer
 	txtRune := []rune(txt)
 	e.Buf = [][]rune{}
@@ -68,6 +69,14 @@ func (e *Editor) LoadText(txt string) {
 	}
 }
 
+func (e *Editor) BufToString() string {
+	buf := bytes.Buffer{}
+	for _, runes := range e.Buf {
+		buf.WriteString(string(runes))
+	}
+	return buf.String()
+}
+
 func (e *Editor) LoadFromFile(fileName string) {
 	e.FileName = fileName
 	bytes, err := os.ReadFile(fileName)
@@ -75,7 +84,7 @@ func (e *Editor) LoadFromFile(fileName string) {
 		e.StatusBar.DrawError(err.Error())
 		return
 	}
-	e.LoadText(string(bytes))
+	e.StringToBuf(string(bytes))
 }
 
 func (e *Editor) SaveToFile() {
@@ -98,10 +107,11 @@ func (e *Editor) SaveToFile() {
 func (e *Editor) InitSize() error {
 	// be sure to have a terminal
 	maxAttempts := 500
+
 	for cnt := 1; cnt <= maxAttempts; cnt++ {
 		e.ScreenWidth = tm.Width()
 		e.ScreenHeight = tm.Height() - 1
-		if e.ScreenWidth <= 0 || e.ScreenHeight <= 0 {
+		if e.ScreenWidth <= 1 || e.ScreenHeight <= 1 {
 			time.Sleep(time.Millisecond * 10)
 		} else {
 			break
@@ -114,12 +124,39 @@ func (e *Editor) InitSize() error {
 	e.Top = 0
 	e.X = 1
 	e.Y = 1
+
 	return nil
+}
+
+func (e *Editor) DetectSizeChange() (quit chan interface{}) {
+	quit = make(chan interface{})
+	go func() {
+		for {
+			select {
+			case <-quit:
+				return
+			case <-time.After(time.Second):
+				w := tm.Width()
+				h := tm.Height() - 1
+				if w != e.ScreenWidth || h != e.ScreenHeight {
+					e.ScreenWidth = w
+					e.ScreenHeight = h
+					e.StringToBuf(e.BufToString())
+					e.MoveCursorSafe(e.X, e.Y)
+					e.DrawAll()
+				}
+			}
+
+		}
+	}()
+	return quit
 }
 
 func (e *Editor) Edit() {
 	e.DrawAll()
+	quitChan := e.DetectSizeChange()
 	keyboard.Listen(e.ListenKeys)
+	quitChan <- 0
 }
 
 func (e *Editor) DrawAll() {
@@ -456,6 +493,9 @@ func (e *Editor) MoveCursorSafe(x int, y int) {
 	}
 	if x < 1 {
 		x = 1
+	}
+	if e.Top > len(e.Buf) {
+		e.Top = len(e.Buf) - 1
 	}
 	if y < 1 {
 		y = 1
