@@ -185,7 +185,7 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 				}
 			}
 			// COLORIZE
-			st = colorize(runes)
+			st = e.colorize(runes, n)
 		} else {
 			st = "\n"
 		}
@@ -208,26 +208,43 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 	e.MoveCursorSafe(e.X, e.Y)
 }
 
-func colorize(r []rune) string {
+func (e *Editor) colorize(r []rune, row int) string {
 	st := string(r)
 
-	// fields at the beginning of the line. e.g.: "metadata:"
-	_, x1, x2 := GetLeftmostWordAtLine(r)
-	if x2 > x1 && r[x2-1] == ':' {
-		isField := true
-		for i := x1; i < x2-1; i++ {
-			if !isAlphanumeric(r[i]) {
-				isField = false
-				break
+	// get the full wrapped line (from previous \n to current row)
+	fromIdx := e.findPrevLineFeed(row) + 1
+	toIdx := e.findNextLineFeed(row)
+	wrappedLine := runesJoin(e.Buf[fromIdx : toIdx+1])
+	word, _, _ := GetLeftmostWordAtLine(wrappedLine)
+	if len(word) > 0 && word[0] == '#' {
+		// COMMENT (also commung from wraped lines)
+		l := len(st)
+		if st[l-1] == '\n' {
+			l--
+		}
+		st = tm.HighlightRegion(st, 0, l, tm.CYAN)
+	} else {
+		// fields at the beginning of the line. e.g.: "metadata:"
+		_, x1, x2 := GetLeftmostWordAtLine(r)
+		if x2 > x1 && r[x2-1] == ':' {
+			isField := true
+			for i := x1; i < x2-1; i++ {
+				if !isAlphanumeric(r[i]) {
+					isField = false
+					break
+				}
+			}
+			if isField {
+				st = tm.HighlightRegion(st, x1, x2-1, tm.BLUE)
 			}
 		}
-		if isField {
-			st = tm.HighlightRegion(st, x1, x2-1, tm.BLUE)
-		}
-	}
+		// all colons:
+		st = strings.ReplaceAll(st, ":", tm.Color(":", tm.MAGENTA))
 
-	// all colons:
-	st = strings.ReplaceAll(st, ":", tm.Color(":", tm.MAGENTA))
+		// curly braces
+		st = strings.ReplaceAll(st, "{", tm.Color(":", tm.YELLOW))
+		st = strings.ReplaceAll(st, "}", tm.Color(":", tm.YELLOW))
+	}
 
 	return st
 }
@@ -605,6 +622,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		e.Top -= e.ScreenHeight
 		if e.Top < 0 {
 			e.Top = 0
+			e.Y = 1
 		}
 		e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
