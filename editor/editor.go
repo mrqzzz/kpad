@@ -242,8 +242,8 @@ func (e *Editor) colorize(r []rune, row int) string {
 		st = strings.ReplaceAll(st, ":", tm.Color(":", tm.MAGENTA))
 
 		// curly braces
-		st = strings.ReplaceAll(st, "{", tm.Color(":", tm.YELLOW))
-		st = strings.ReplaceAll(st, "}", tm.Color(":", tm.YELLOW))
+		st = strings.ReplaceAll(st, "{", tm.Color("{", tm.YELLOW))
+		st = strings.ReplaceAll(st, "}", tm.Color("}", tm.YELLOW))
 	}
 
 	return st
