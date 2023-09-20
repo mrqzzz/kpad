@@ -31,31 +31,35 @@ func NewHelpDialog(tag string, e *Editor, p DialogParent, x, y, width, height in
 
 	st := `
 
-CTRL+space:    Kubectl autocomplete (Linux,Mac)
-CTRL+k:        Kubectl autocomplete (Windows)
+F1:              This help
 
-Arrows:        Move cursor around
-Home:          Move to begin of line
-End:           Move to end of line
-PageUp:        Move up one page
-PageDown:      Move down one page
+CTRL+space:      Kubectl autocomplete (Linux,Mac)
+CTRL+k:          Kubectl autocomplete (Windows)
+
+Arrows:          Move cursor around
+Home:            Move to begin of line
+End:             Move to end of line
+PageUp:          Move up one page
+PageDown:        Move down one page
 
 ALT+PageUp:
-CTRL+t:        Move to top of document
+CTRL+t:          Move to top of document
 
 ALT+PageDown:
-CTRL+b:        Move to bottom of document
+CTRL+b:          Move to bottom of document
 
 CMD+Right:
-CTRL+x:        Move to next word
+CTRL+x:          Move to next word
 
 CMD+Left:
-CTRL+z:        Move to previous word
+CTRL+z:          Move to previous word
 
-CTRL+d:        Delete line
+CTRL+d:          Delete line
 
-CTRL+f:        Find 
-CTRL+n:        Find next
+CMD+Backspace:   Forward delete
+
+CTRL+f:          Find 
+CTRL+n:          Find next
 `
 
 	spl1 := strings.Split(st, "\n")
