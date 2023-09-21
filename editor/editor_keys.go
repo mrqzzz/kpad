@@ -142,13 +142,13 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 	} else if key.Code == keys.Left {
 		// ARROW LEFT
 		e.CursorWithdraw(-1)
-		e.MoveCursorSafe(e.X, e.Y)
+		//e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.Right {
 		// ARROW RIGHT
 		e.CursorAdvance(1)
-		e.MoveCursorSafe(e.X, e.Y)
+		//e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.Backspace && key.AltPressed {
@@ -161,9 +161,11 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		}
 	} else if key.Code == keys.Backspace {
 		// DELETE
-		withdraws, _ := e.DeleteAt(e.X-1, e.Y+e.Top-1)
+		row := e.Y + e.Top - 1
+		col := runesToCover(e.Buf[row], e.X-1)
+		withdraws, _ := e.DeleteAt(col, row)
 		e.CursorWithdraw(withdraws)
-		e.MoveCursorSafe(e.X, e.Y)
+		//e.MoveCursorSafe(e.X, e.Y)
 		e.DrawAll()
 	} else if key.Code == keys.CtrlD {
 		// DELETE ROW
@@ -210,7 +212,11 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 
 			// ADD TEXT
 			oldY := e.Y
-			insertedCharCount, rowsPushedDown := e.InsertAt(key.Runes, e.X-1, e.Y+e.Top-1)
+
+			row := e.Y + e.Top - 1
+			col := runesToCover(e.Buf[row], e.X-1)
+
+			insertedCharCount, rowsPushedDown := e.InsertAt(key.Runes, col, e.Y+e.Top-1)
 			e.CursorAdvance(insertedCharCount)
 
 			// optimized partial redraw:

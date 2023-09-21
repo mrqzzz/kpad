@@ -9,7 +9,8 @@ import (
 
 func TestExplain(t *testing.T) {
 	//t.SkipNow()
-	explain, err := editor.ExecKubectlExplain("pod.spec")
+	ed := editor.NewEditor(10, 10)
+	explain, err := ed.ExecKubectlExplain("pod.spec")
 	assert.NoError(t, err)
 	fmt.Println(string(explain))
 	tree := editor.BuildExplainFieldsTree(explain)

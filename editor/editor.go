@@ -169,8 +169,8 @@ func (e *Editor) DrawAll() {
 }
 
 func (e *Editor) DrawRows(fromIdx int, toIdx int) {
-	tm.MoveCursor(1, fromIdx-e.Top+1)
 	for n := fromIdx; n <= toIdx; n++ {
+		tm.MoveCursor(1, n-e.Top+1)
 		var st string
 		if n < len(e.Buf) {
 			runes := runeCopy(e.Buf[n])
@@ -204,13 +204,16 @@ func (e *Editor) DrawRows(fromIdx int, toIdx int) {
 		}
 
 		// string + clear to EOL + \r (\r is for windows)
-		out := st1 + "\033[0K" + st2 + "\r"
+		out := st1 + "\033[0K" + st2 // + "\r"
 		tm.Print(out)
 	}
-	e.MoveCursorSafe(e.X, e.Y)
+	//e.MoveCursorSafe(e.X, e.Y)
 }
 
 func (e *Editor) colorize(r []rune, row int) string {
+	if len(r) == 0 {
+		return ""
+	}
 	st := string(r)
 
 	// get the full wrapped line (from previous \n to current row)
@@ -219,7 +222,7 @@ func (e *Editor) colorize(r []rune, row int) string {
 	wrappedLine := runesJoin(e.Buf[fromIdx : toIdx+1])
 	word, _, _ := GetLeftmostWordAtLine(wrappedLine)
 	if len(word) > 0 && word[0] == '#' {
-		// COMMENT (also commung from wraped lines)
+		// COMMENT (also in wrapped lines)
 		l := len(st)
 		if st[l-1] == '\n' {
 			l--
@@ -289,25 +292,20 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 		if row > 0 {
 			row2 := e.findNextLineFeed(row)
 			// get the string from the cursor (at the beginning of line), down to the next \n:
-			st := runesJoin(e.Buf[row : row2+1])
+			block := runesJoin(e.Buf[row : row2+1])
+			// delete the line from Buf
 			e.Buf = append(e.Buf[:row], e.Buf[row2+1:]...)
-
-			extraWithdraw := 0
-			// if the last rune from the previous row is a \n , then there is an extra withdraw
-			if e.Buf[row-1][len(e.Buf[row-1])-1] == '\n' {
-				extraWithdraw = -1
-			}
 
 			// remove last rune from the previous line
 			if len(e.Buf[row-1]) > 0 {
 				e.Buf[row-1] = e.Buf[row-1][:len(e.Buf[row-1])-1]
 			}
 			// calculate how many cursor withdraws
-			emptySpaces := e.ScreenWidth - len(e.Buf[row-1]) - runesExtraWidth(e.Buf[row-1], -1)
-			numWithdraws = -runesToCover(st, emptySpaces) + extraWithdraw
+			emptySpaces := e.ScreenWidth - runesWidth(e.Buf[row-1])
+			numWithdraws = -runesToCover(block, emptySpaces-1)
 			//numWithdraws = -min(w1, w2) - 1
 			// insert the string at the end of the previous row
-			_, rowsToRedraw = e.InsertAt(st, len(e.Buf[row-1]), row-1)
+			_, rowsToRedraw = e.InsertAt(block, len(e.Buf[row-1]), row-1)
 			if numWithdraws != 0 {
 				e.BufferChanged = true
 			}
@@ -315,6 +313,19 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 
 	} else {
 		// pull up
+
+		// withdraws logic depending on char widths
+		w1 := runeWidth(e.Buf[row][col-1])
+		w2 := runeWidth(e.Buf[row][col])
+		numWithdraws = -w1
+		if w1 == 1 && w2 == 2 {
+			numWithdraws = 0
+		} else if w1 == 2 && w2 == 2 {
+			numWithdraws = -1
+		} else if w1 == 2 && e.Buf[row][col] == '\n' {
+			numWithdraws = -1
+		}
+
 		e.Buf[row] = append(e.Buf[row][:col-1], e.Buf[row][col:]...)
 		for r := row; r < len(e.Buf); r++ {
 			if len(e.Buf[r]) > 0 && e.Buf[r][len(e.Buf[r])-1] == '\n' {
@@ -335,23 +346,27 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 			}
 			rowsToRedraw++
 		}
-		numWithdraws = -1
 		e.BufferChanged = true
 	}
 	return
 }
 
 func (e *Editor) CursorAdvance(n int) {
-	col := e.X - 1
 	row := e.Y + e.Top - 1
+	col := runesToCover(e.Buf[row], e.X-1)
+
 	for i := 0; i < n; i++ {
-		col++ // += runeWidth(e.Buf[row][col])
-		if col >= len(e.Buf[row]) && row < len(e.Buf)-1 {
-			row++
-			col = 0
+		col++
+		if col >= len(e.Buf[row]) {
+			if row >= len(e.Buf)-1 {
+				col--
+			} else {
+				row++
+				col = 0
+			}
 		}
 		if row >= len(e.Buf) {
-			row = len(e.Buf)
+			row = len(e.Buf) - 1
 		}
 	}
 
@@ -360,15 +375,18 @@ func (e *Editor) CursorAdvance(n int) {
 		e.DrawAll()
 	}
 
-	e.X = col + 1
+	e.X = runesWidth(e.Buf[row][:col]) + 1 // col + 1
 	e.Y = row - e.Top + 1
 	//tm.MoveCursor(e.X, e.Y)
 	//tm.Flush()
 }
 
 func (e *Editor) CursorWithdraw(n int) {
-	col := e.X - 1
 	row := e.Y + e.Top - 1
+	col := 0
+	if e.X > 1 {
+		col = runesToCover(e.Buf[row], e.X-1)
+	}
 	for i := 0; i > n; i-- {
 		col-- // -= runeWidth(e.Buf[row][col])
 		if col < 0 && row == 0 {
@@ -379,7 +397,7 @@ func (e *Editor) CursorWithdraw(n int) {
 			if row < 0 {
 				row = 0
 			}
-			col = len(e.Buf[row])
+			col = len(e.Buf[row]) - 1
 		}
 	}
 
@@ -387,7 +405,9 @@ func (e *Editor) CursorWithdraw(n int) {
 		e.Top = row
 		e.DrawAll()
 	}
-	e.X = col + 1
+	//e.X = col + 1
+
+	e.X = runesWidth(e.Buf[row][:col]) + 1
 	e.Y = row - e.Top + 1
 	//tm.MoveCursor(e.X, e.Y)
 	//tm.Flush()
@@ -503,6 +523,7 @@ func (e *Editor) GetNextWord(col, row int, increment int) (advancements int) {
 }
 
 func (e *Editor) MoveCursorSafe(x int, y int) {
+
 	if y > len(e.Buf)-e.Top {
 		y = len(e.Buf) - e.Top
 	}
@@ -520,9 +541,13 @@ func (e *Editor) MoveCursorSafe(x int, y int) {
 		y = 1
 		e.Top--
 	}
+
 	e.X = x
 	e.Y = y
-	tm.MoveCursor(e.X+runesExtraWidth(runes[:e.X-1], -1), e.Y)
+
+	//extraWidth := runesExtraWidth(runes[:e.X-1], -1) * 4
+	//tm.MoveCursor(e.X+extraWidth+3, e.Y)
+	//tm.MoveCursor(1, e.Y)
 }
 
 func (e *Editor) DeleteRow(idx int) {
@@ -642,6 +667,7 @@ func (e *Editor) FindString(searchString string) {
 	cnt := 0
 	var p int
 	var st string
+	searchString = strings.ToLower(searchString)
 	for i := e.Top + e.Y - 1; i < len(e.Buf); i++ {
 		// get the whole line from the current row down to the next \n
 		n := e.findNextLineFeed(i) + 1
@@ -651,7 +677,7 @@ func (e *Editor) FindString(searchString string) {
 		} else {
 			st = string(runes)
 		}
-		p = strings.Index(st, searchString)
+		p = strings.Index(strings.ToLower(st), searchString)
 		offs := iifInt(cnt == 0, e.X, 0)
 		if p > -1 && p < e.ScreenWidth-offs-1 {
 			if cnt == 0 {

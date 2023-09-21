@@ -1,5 +1,7 @@
 package editor
 
+import "golang.org/x/text/width"
+
 func min(a int, b int) int {
 	if a < b {
 		return a
@@ -88,7 +90,12 @@ func runeCopyAppend(runes1 []rune, runes2 []rune) []rune {
 //	"a"  -> 1
 //	"あ" -> 2
 func runeWidth(r rune) int {
-	if r > 255 {
+	//if r > 255 {
+	//	return 2
+	//}
+	//return 1
+	properties := width.LookupRune(r)
+	if properties.Kind() == width.EastAsianWide {
 		return 2
 	}
 	return 1
