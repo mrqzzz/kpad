@@ -153,10 +153,12 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		tm.Flush()
 	} else if key.Code == keys.Backspace && key.AltPressed {
 		// FORWARD DELETE
-		if e.Buf[e.Y+e.Top-1][e.X-1] != '\n' {
-			e.DeleteAt(e.X, e.Y+e.Top-1)
-			e.CursorWithdraw(0)
-			e.MoveCursorSafe(e.X, e.Y)
+		row := e.Y + e.Top - 1
+		col := runesToCover(e.Buf[row], e.X-1)
+		if col < (len(e.Buf[row])) && e.Buf[row][col] != '\n' {
+			e.DeleteAt(col+1, row)
+			//e.CursorWithdraw(0)
+			//e.MoveCursorSafe(e.X, e.Y)
 			e.DrawAll()
 		}
 	} else if key.Code == keys.Backspace {
