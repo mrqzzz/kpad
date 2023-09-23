@@ -34,9 +34,6 @@ func NewSearchDialog(tag, searchString string, e *Editor, p DialogParent, x, y, 
 }
 
 func (d *SearchDialog) ListenKeys(key keys.Key) (stop bool, err error) {
-	if key.Code == keys.CtrlC {
-		return true, nil // Stop listener by returning true on Ctrl+C
-	}
 	if key.Code == keys.Enter {
 		d.DialogParent.CloseDialog(d, true)
 	} else if key.Code == keys.Esc || key.Code == keys.CtrlF {

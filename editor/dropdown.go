@@ -4,18 +4,21 @@ import (
 	tm "github.com/buger/goterm"
 	"github.com/mrqzzz/keyboard/keys"
 	"strings"
+	"time"
 )
 
 type Dropdown struct {
 	Box
-	Tag           string
-	Editor        *Editor
-	DialogParent  DialogParent
-	Keys          []string
-	Values        []string
-	GrayedKeys    map[string]interface{}
-	SelectedIndex int
-	TopIndex      int
+	Tag             string
+	Editor          *Editor
+	DialogParent    DialogParent
+	Keys            []string
+	Values          []string
+	GrayedKeys      map[string]interface{}
+	SelectedIndex   int
+	TopIndex        int
+	KeySearchTime   time.Time
+	KeySearchString string
 }
 
 func NewDropdown(tag, match string, e *Editor, p DialogParent, x, y, width, height int, keys, values []string, grayedKeys map[string]interface{}) *Dropdown {
@@ -57,28 +60,57 @@ func formatValuesStrings(values []string, maxWidth int) {
 }
 
 func (d *Dropdown) ListenKeys(key keys.Key) (stop bool, err error) {
-	if key.Code == keys.CtrlC {
-		return true, nil // Stop listener by returning true on Ctrl+C
-	}
 	if key.Code == keys.Enter || key.Code == keys.Tab {
 		d.DialogParent.CloseDialog(d, true)
-	}
-	if key.Code == keys.Esc {
+	} else if key.Code == keys.Esc {
 		d.DialogParent.CloseDialog(d, false)
-	}
-	if key.Code == keys.Up && d.SelectedIndex > 0 {
+	} else if key.Code == keys.Up && d.SelectedIndex > 0 {
 		d.SelectedIndex--
 		if d.SelectedIndex < d.TopIndex {
 			d.TopIndex--
 		}
 		d.DrawAll()
-	}
-	if key.Code == keys.Down && d.SelectedIndex < len(d.Keys)-1 {
+	} else if key.Code == keys.Down && d.SelectedIndex < len(d.Keys)-1 {
 		d.SelectedIndex++
 		if d.SelectedIndex >= d.TopIndex+d.Height {
 			d.TopIndex++
 		}
 		d.DrawAll()
+	} else if key.Code == keys.PgUp {
+		// PAGE UP
+		d.TopIndex -= d.Height
+		if d.TopIndex < 0 {
+			d.TopIndex = 0
+		}
+		d.SelectedIndex = d.TopIndex
+		d.DrawAll()
+	} else if key.Code == keys.PgDown {
+		// PAGE DOWN
+		d.TopIndex += d.Height
+		if len(d.Keys)-d.TopIndex < d.Height {
+			d.TopIndex = len(d.Keys) - d.Height
+		}
+		d.SelectedIndex = d.TopIndex + d.Height - 1
+		d.DrawAll()
+	} else if key.Code == keys.CtrlT || (key.Code == keys.PgUp && key.AltPressed) {
+		// MOVE TO TOP OF LIST
+		d.TopIndex = 0
+		d.SelectedIndex = 0
+		d.DrawAll()
+	} else if key.Code == keys.CtrlB || (key.Code == keys.PgDown && key.AltPressed) {
+		// MOVE TO END OF LIST
+		d.TopIndex = len(d.Keys) - d.Height
+		d.SelectedIndex = len(d.Keys) - 1
+		d.DrawAll()
+	} else if len(key.Runes) > 0 {
+		t := time.Since(d.KeySearchTime).Milliseconds()
+		if t > 1000 {
+			d.KeySearchString = ""
+		}
+		d.KeySearchString += key.String()
+		d.selectMatch(d.KeySearchString)
+		d.DrawAll()
+		d.KeySearchTime = time.Now()
 	}
 
 	return false, nil
@@ -112,13 +144,19 @@ func (d *Dropdown) GetTag() string {
 
 func (d *Dropdown) selectMatch(match string) {
 	match = strings.ToUpper(strings.Trim(match, ":"))
-	for i := range d.Values {
-		if strings.Contains(strings.ToUpper(d.Values[i]), match) && match != "" {
-			d.SelectedIndex = i
-			if d.SelectedIndex >= d.TopIndex+d.Height {
-				d.TopIndex = d.SelectedIndex - d.Height + 1
+	if match != "" {
+		bestPos := 9999
+		for i := range d.Values {
+			pos := strings.Index(strings.ToUpper(d.Values[i]), match)
+			if pos > -1 && pos < bestPos {
+				bestPos = pos
+				d.SelectedIndex = i
 			}
-			break
+		}
+		if d.SelectedIndex >= d.TopIndex+d.Height {
+			d.TopIndex = d.SelectedIndex - d.Height + 1
+		} else if d.SelectedIndex < d.TopIndex {
+			d.TopIndex = d.SelectedIndex
 		}
 	}
 }
