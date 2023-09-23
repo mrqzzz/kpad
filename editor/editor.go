@@ -524,16 +524,6 @@ func (e *Editor) GetNextWord(col, row int, increment int) (advancements int) {
 
 func (e *Editor) MoveCursorSafe(x int, y int) {
 
-	if y > len(e.Buf)-e.Top {
-		y = len(e.Buf) - e.Top
-	}
-	runes := e.Buf[e.Top+y-1]
-	if x > len(runes) {
-		x = len(runes)
-	}
-	if x < 1 {
-		x = 1
-	}
 	if e.Top > len(e.Buf) {
 		e.Top = len(e.Buf) - 1
 	}
@@ -542,12 +532,39 @@ func (e *Editor) MoveCursorSafe(x int, y int) {
 		e.Top--
 	}
 
+	if y > len(e.Buf)-e.Top {
+		y = len(e.Buf) - e.Top
+	}
+	runes := e.Buf[e.Top+y-1]
+	spaces := runesWidth(runes)
+	if x > spaces {
+		x = spaces
+	}
+
+	// properly select a wide char (not half)
+	w := 0
+	for i := 0; i <= x; i++ {
+		if i >= len(runes) {
+			x = w
+			break
+		}
+		rw := runeWidth(runes[i])
+		w += rw
+		if w > x {
+			x = w - 1
+			if i > 0 && rw == 1 && runeWidth(runes[i-1]) == 2 {
+				x++
+			}
+			break
+		}
+	}
+
+	if x < 1 {
+		x = 1
+	}
+
 	e.X = x
 	e.Y = y
-
-	//extraWidth := runesExtraWidth(runes[:e.X-1], -1) * 4
-	//tm.MoveCursor(e.X+extraWidth+3, e.Y)
-	//tm.MoveCursor(1, e.Y)
 }
 
 func (e *Editor) DeleteRow(idx int) {

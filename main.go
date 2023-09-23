@@ -23,7 +23,8 @@ func main() {
 	err = e.LoadConfig()
 	if err != nil {
 		fmt.Println("ERROR", err)
-		return
+		e.StatusBar.DrawError(err.Error())
+		//return
 	}
 
 	for i, arg := range os.Args {

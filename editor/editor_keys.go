@@ -55,7 +55,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 	} else if key.Code == keys.Home {
 		// MOVE TO BEGIN OF LINE
 		e.X = 1
-		e.MoveCursorSafe(e.X, e.Y)
+		//e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.End || key.Code == 91 && key.AltPressed {

@@ -21,7 +21,7 @@ func ReadFlatYaml(s string) (root *YNode, err error) {
 		}
 		sts := strings.Split(line, ":")
 		if len(sts) < 2 {
-			return nil, errors.New("Ivalid config. It must be a flat 'key: value' list")
+			return nil, errors.New("Invalid config. It must be a flat 'key: value' list")
 		}
 		sts[1] = strings.Join(sts[1:], ":")
 		root.Children = append(root.Children, &YNode{
