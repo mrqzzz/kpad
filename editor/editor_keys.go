@@ -60,8 +60,9 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		tm.Flush()
 	} else if key.Code == keys.End || key.Code == 91 && key.AltPressed {
 		// MOVE TO END OF LINE
-		e.X = e.ScreenWidth
-		e.MoveCursorSafe(e.X, e.Y)
+		//+e.X = e.ScreenWidth
+		e.X = runesWidth(e.Buf[e.Y+e.Top-1])
+		//e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.CtrlT || (key.Code == keys.PgUp && key.AltPressed) {
