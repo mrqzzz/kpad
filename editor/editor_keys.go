@@ -128,15 +128,17 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 		}
 	} else if key.Code == keys.Left && key.AltPressed || key.Code == keys.CtrlA || key.Code == CTRLz {
 		// MOVE TO PREVIOUS WORD
-		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, -1)
-		e.CursorWithdraw(advences)
+		col := runesToCover(e.Buf[e.Y+e.Top-1], e.X-1)
+		advances := e.GetNextWord(col, e.Y+e.Top-1, -1)
+		e.CursorWithdraw(advances)
 		e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
 		tm.Flush()
 	} else if key.Code == keys.Right && key.AltPressed || key.Code == keys.CtrlE || key.Code == keys.CtrlX {
 		// MOVE TO NEXT WORD
-		advences := e.GetNextWord(e.X-1, e.Y+e.Top-1, 1)
-		e.CursorAdvance(advences)
+		col := runesToCover(e.Buf[e.Y+e.Top-1], e.X-1)
+		advances := e.GetNextWord(col, e.Y+e.Top-1, 1)
+		e.CursorAdvance(advances)
 		e.MoveCursorSafe(e.X, e.Y)
 		e.StatusBar.DrawEditing()
 		tm.Flush()

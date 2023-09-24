@@ -495,6 +495,9 @@ func (e *Editor) GetWordAtPos(col, row int) (word []rune, startCol, startRow, en
 
 func (e *Editor) GetNextWord(col, row int, increment int) (advancements int) {
 	insideWord := true
+	if col >= len(e.Buf[row]) {
+		col = len(e.Buf[row]) - 1
+	}
 	for {
 		onLetter := isLetter(e.Buf[row][col])
 		if !insideWord && onLetter {
