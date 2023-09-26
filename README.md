@@ -1,7 +1,8 @@
 # kpad
 
-Kpad is a simple multiplatform terminal editor with syntax highlighting and contextual auto-completion for editing kubernetes declarative manifest yaml files.
-It provides a handy auto-complete that pops up a list of possible context-aware fields at the cursor position.
+Kpad is a simple multiplatform terminal editor born to edit kubernetes declarative manifest yaml files.
+
+It has syntax highlighting and provides a handy auto-complete that pops up a list of possible context-aware fields at the cursor position.
 
 
 ## autocompletion configuration
@@ -33,9 +34,9 @@ Kpad is still work-in-progress, although it is pretty stable and quite fast.
 It is written in go. 
 It's pretty lightweight.
 It compiles for Mac, Win, Linux.
+It also supports wide characters (2x width on the terminal).
 It even runs on my phone.
-It also supports wide characters.
 
-There could be bugs, so you are welcome to contribute with fixes,enhancements,features,etc.
+There could be bugs, and you are welcome to contribute with fixes,enhancements,features,etc.
 
 
