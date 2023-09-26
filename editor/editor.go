@@ -405,6 +405,9 @@ func (e *Editor) CursorWithdraw(n int) {
 		e.Top = row
 		e.DrawAll()
 	}
+	if row >= len(e.Buf) {
+		row = len(e.Buf) - 1
+	}
 	//e.X = col + 1
 
 	e.X = runesWidth(e.Buf[row][:col]) + 1
