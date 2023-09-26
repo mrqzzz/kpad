@@ -1,6 +1,6 @@
 # kpad
 
-Kpad is a simple multiplatform terminal editor for editing kubernetes declarative manifest yaml files.
+Kpad is a simple multiplatform terminal editor with syntax highlighting and contextual auto-completion for editing kubernetes declarative manifest yaml files.
 It provides a handy auto-complete that pops up a list of possible context-aware fields at the cursor position.
 
 
