@@ -633,7 +633,7 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 	if e.Dialog != nil {
 		if drop, ok := e.Dialog.(*Dropdown); ok {
 			if accept {
-				word, startCol, _, col, row := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
+				word, _, _, col, row := e.GetWordAtPos(e.X-1, e.Y-1+e.Top)
 
 				// if there is a space after the word, delete it because it will be added inserting the completion
 				runes := e.Buf[e.Y-1+e.Top]
@@ -642,11 +642,6 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 					word = append(word, ' ')
 				}
 
-				// delete each rune
-				delta := 0
-				if len(word) > 0 {
-					delta = e.X - 1 - startCol
-				}
 				for i := 0; i < len(word); i++ {
 					e.DeleteAt(col+1, row)
 					col--
@@ -654,7 +649,6 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 						break
 					}
 				}
-				e.CursorWithdraw(-delta)
 				e.MoveCursorSafe(e.X, e.Y)
 				switch d.GetTag() {
 				case "api-resources":
