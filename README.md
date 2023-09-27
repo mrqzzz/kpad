@@ -30,6 +30,7 @@ To make kpad your default kubernetes manifests editor, set the "KUBE_EDITOR" env
 In linux, for example:
 `export KUBE_EDITOR=/<path>/<to>/kpad`
 
+![Screenshot](res/preview-edit.gif)
 
 
 Kpad is still work-in-progress, although it is pretty stable and quite fast.
