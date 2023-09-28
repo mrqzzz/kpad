@@ -254,15 +254,16 @@ func (e *Editor) colorize(r []rune, row int) string {
 	return st
 }
 
-func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, rowsToRedraw int) {
+func (e *Editor) InsertAt(ins []rune, col int, row int, replaceBadChars bool) (insertedCharCount int, rowsToRedraw int) {
 
 	if len(ins) == 0 {
 		return 0, 0
 	}
 
 	rowsToRedraw = 1
-	e.runeReplaceBadChars(ins) // TODO only if not in recursion
-	//e.ReplaceBadChars(&ins)
+	if replaceBadChars {
+		e.runeReplaceBadChars(ins)
+	}
 
 	if row >= len(e.Buf) {
 		e.Buf = append(e.Buf, []rune{})
@@ -287,7 +288,7 @@ func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, 
 		e.Buf[row+1] = st2
 		rowsToRedraw = e.ScreenHeight - e.X
 	} else if len(st2) > 0 {
-		_, rPushed := e.InsertAt(runeCopy(st2), 0, row+1)
+		_, rPushed := e.InsertAt(st2, 0, row+1, false)
 		rowsToRedraw += rPushed
 	}
 
@@ -314,7 +315,7 @@ func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int)
 			numWithdraws = -runesToCover(block, emptySpaces-1)
 			//numWithdraws = -min(w1, w2) - 1
 			// insert the string at the end of the previous row
-			_, rowsToRedraw = e.InsertAt(block, len(e.Buf[row-1]), row-1)
+			_, rowsToRedraw = e.InsertAt(block, len(e.Buf[row-1]), row-1, false)
 			if numWithdraws != 0 {
 				e.BufferChanged = true
 			}
@@ -663,11 +664,11 @@ func (e *Editor) CloseDialog(d Dialog, accept bool) {
 				case "api-resources":
 					st := strings.Split(drop.Keys[drop.SelectedIndex], ":")
 					template := []rune(GenerateResourceTemplate(st[0], st[1]))
-					e.InsertAt(template, e.X-1, e.Y+e.Top-1)
+					e.InsertAt(template, e.X-1, e.Y+e.Top-1, true)
 					e.CursorAdvance(len(template))
 				case "explain":
 					st := drop.Keys[drop.SelectedIndex] + ": "
-					e.InsertAt([]rune(st), e.X-1, e.Y+e.Top-1)
+					e.InsertAt([]rune(st), e.X-1, e.Y+e.Top-1, true)
 					e.CursorAdvance(len(st))
 
 				}

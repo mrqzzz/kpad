@@ -221,7 +221,7 @@ func (e *Editor) ListenKeys(key keys.Key) (stop bool, err error) {
 			row := e.Y + e.Top - 1
 			col := runesToCover(e.Buf[row], e.X-1)
 
-			insertedCharCount, rowsPushedDown := e.InsertAt(key.Runes, col, e.Y+e.Top-1)
+			insertedCharCount, rowsPushedDown := e.InsertAt(key.Runes, col, e.Y+e.Top-1, true)
 			e.CursorAdvance(insertedCharCount)
 
 			// optimized partial redraw:
