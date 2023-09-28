@@ -254,14 +254,14 @@ func (e *Editor) colorize(r []rune, row int) string {
 	return st
 }
 
-func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, rowsPushedDown int) {
+func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, rowsToRedraw int) {
 
 	if len(ins) == 0 {
 		return 0, 0
 	}
 
-	rowsPushedDown = 1
-	e.runeReplaceBadChars(ins)
+	rowsToRedraw = 1
+	e.runeReplaceBadChars(ins) // TODO only if not in recursion
 	//e.ReplaceBadChars(&ins)
 
 	if row >= len(e.Buf) {
@@ -279,12 +279,21 @@ func (e *Editor) InsertAt(ins []rune, col int, row int) (insertedCharCount int, 
 
 	st1, st2 := runesSplitToCover(st, e.ScreenWidth)
 	e.Buf[row] = runeCopy(st1)
-	_, rPushed := e.InsertAt(runeCopy(st2), 0, row+1)
-	rowsPushedDown += rPushed
+
+	if len(st2) > 0 && runesWidth(st2) < e.ScreenWidth-1 && st2[len(st2)-1] == '\n' {
+		// if st2 fits the next line, immediately insert it there
+		e.Buf = append(e.Buf, []rune{})
+		copy(e.Buf[row+2:], e.Buf[row+1:])
+		e.Buf[row+1] = st2
+		rowsToRedraw = e.ScreenHeight - e.X
+	} else if len(st2) > 0 {
+		_, rPushed := e.InsertAt(runeCopy(st2), 0, row+1)
+		rowsToRedraw += rPushed
+	}
 
 	e.BufferChanged = true
 
-	return len(ins), rowsPushedDown
+	return len(ins), rowsToRedraw
 }
 
 func (e *Editor) DeleteAt(col int, row int) (numWithdraws int, rowsToRedraw int) {
