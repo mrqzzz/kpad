@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-func TestExplain(t *testing.T) {
-	//t.SkipNow()
+func TestExplainWithRunningKubectl(t *testing.T) {
+	t.SkipNow()
 	ed := editor.NewEditor(10, 10)
 	explain, err := ed.ExecKubectlExplain("pod.spec")
 	assert.NoError(t, err)
@@ -118,7 +118,7 @@ spec:
 	e := editor.NewEditor(100, 100)
 	e.StringToBuf(txt)
 	st, _ := editor.BuildCurrentPath(e, 6, 12)
-	assert.Equal(t, "spec.containers.ports", st)
+	assert.Equal(t, "Pod.spec.containers.ports", st)
 
 }
 
@@ -149,18 +149,18 @@ spec:
 	e.StringToBuf(txt)
 
 	st, _ := editor.BuildCurrentPath(e, 3, 2)
-	assert.Equal(t, "metadata", st)
+	assert.Equal(t, "Deployment.metadata", st)
 
 	st, _ = editor.BuildCurrentPath(e, 5, 7)
-	assert.Equal(t, "spec.selector.matchLabels", st)
+	assert.Equal(t, "Deployment.spec.selector.matchLabels", st)
 
 	st, _ = editor.BuildCurrentPath(e, 11, 18)
-	assert.Equal(t, "spec.template.spec.containers.ports.containerPort", st)
+	assert.Equal(t, "Deployment.spec.template.spec.containers.ports.containerPort", st)
 
 	st, _ = editor.BuildCurrentPath(e, 2, 1)
-	assert.Equal(t, "kind", st)
+	assert.Equal(t, "Deployment.apiVersion", st)
 
 	st, _ = editor.BuildCurrentPath(e, 1, 7)
-	assert.Equal(t, "spec", st)
+	assert.Equal(t, "Deployment.spec", st)
 
 }
