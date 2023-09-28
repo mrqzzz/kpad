@@ -1,5 +1,7 @@
 # kpad
 
+### A Kubernetes manifests editor.
+
 Kpad is a simple multiplatform terminal editor born to edit kubernetes declarative manifest yaml files.
 
 ![Screenshot](res/preview.gif)
