@@ -275,22 +275,33 @@ func (e *Editor) InsertAt(ins []rune, col int, row int, replaceBadChars bool) (i
 	} else {
 		st = runeCopyAppend(e.Buf[row][:col], ins)
 		st = runeCopyAppend(st, e.Buf[row][col:])
-
+		nextLF := e.findNextLineFeed(row)
+		for n := row + 1; n <= nextLF; n++ {
+			st = runeCopyAppend(st, e.Buf[n][:])
+		}
+		if row < nextLF {
+			e.Buf = append(e.Buf[:row+1], e.Buf[nextLF+1:]...)
+		}
 	}
 
-	st1, st2 := runesSplitToCover(st, e.ScreenWidth)
-	e.Buf[row] = runeCopy(st1)
+	bag := [][]rune{}
 
-	if len(st2) > 0 && runesWidth(st2) < e.ScreenWidth-1 && st2[len(st2)-1] == '\n' {
-		// if st2 fits the next line, immediately insert it there
-		e.Buf = append(e.Buf, []rune{})
-		copy(e.Buf[row+2:], e.Buf[row+1:])
-		e.Buf[row+1] = st2
-		rowsToRedraw = e.ScreenHeight - e.X
-	} else if len(st2) > 0 {
-		_, rPushed := e.InsertAt(st2, 0, row+1, false)
-		rowsToRedraw += rPushed
+	for {
+		st1, st2 := runesSplitToCover(st, e.ScreenWidth)
+		bag = append(bag, runeCopy(st1))
+		st = st2
+		if len(st) == 0 {
+			break
+		}
 	}
+	l := len(bag)
+	if l > 1 {
+		app := make([][]rune, l-1)
+		e.Buf = append(e.Buf, app...)
+	}
+	copy(e.Buf[row+l-1:], e.Buf[row:])
+	copy(e.Buf[row:], bag)
+	rowsToRedraw = e.ScreenHeight - e.Y /// TODO CALCULATE CORRECTLY rowsToRedraw
 
 	e.BufferChanged = true
 
