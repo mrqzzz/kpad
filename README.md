@@ -45,4 +45,9 @@ Kpad is still work-in-progress, although it is pretty stable and quite fast.
 
 There could be bugs, and you are welcome to contribute with fixes,enhancements,features,etc.
 
+## missing/TODO features
+
+- Undo
+- Replace text
+
 
