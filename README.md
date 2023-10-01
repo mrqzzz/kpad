@@ -43,7 +43,7 @@ Kpad is still work-in-progress, although it is pretty stable and quite fast.
 - It also supports wide characters (2x width on the terminal).
 - It even runs on my phone.
 
-![Screenshot](res/phone.gif)
+![Screenshot](res/phone.jpg)
 (using the kubeconfig of my remote cluster)
 
 There could be bugs, and you are welcome to contribute with fixes,enhancements,features,etc.
