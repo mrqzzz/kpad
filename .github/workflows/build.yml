@@ -32,3 +32,9 @@ jobs:
       with:
         name: Go-Test-results
         path: TestResults.json
+
+    - name: Upload kpad executable
+      uses: actions/upload-artifact@v3
+      with:
+        name: kpad binary (Ubuntu)
+        path: kpad
