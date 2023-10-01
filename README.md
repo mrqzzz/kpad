@@ -57,7 +57,7 @@ There could be bugs, and you are welcome to contribute with fixes,enhancements,f
 **Building**
 - Clone this repo, then from the main directory of this repo, build with:
 
-`>go build .`
+`go build .`
 
 The executable will be created in that directory.
 
