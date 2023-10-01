@@ -1,5 +1,4 @@
 # kpad
-( Get the latest **kpad** executable for Ubuntu : https://github.com/mrqzzz/kpad/actions/runs/6369516146 )
 
 ### A Kubernetes manifests editor.
 
@@ -44,7 +43,25 @@ Kpad is still work-in-progress, although it is pretty stable and quite fast.
 - It also supports wide characters (2x width on the terminal).
 - It even runs on my phone.
 
+![Screenshot](res/phone.gif)
+(using the kubeconfig of my remote cluster)
+
 There could be bugs, and you are welcome to contribute with fixes,enhancements,features,etc.
+
+## building the kpad binary
+
+**Requirement**
+- Download and install Go https://go.dev/doc/install  (Mac/Win/Linux)
+
+**Building**
+- Clone this repo, then from the main directory of this repo, build with:
+
+`>go build .`
+
+The executable will be created in that directory.
+
+You can also download the latest **kpad** executable for Ubuntu : https://github.com/mrqzzz/kpad/actions/runs/6369516146
+
 
 ## missing/TODO features
 
