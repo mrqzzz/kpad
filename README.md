@@ -1,4 +1,5 @@
 # kpad
+( Get the latest **kpad** executable for Ubuntu : https://github.com/mrqzzz/kpad/actions/runs/6369516146 )
 
 ### A Kubernetes manifests editor.
 
