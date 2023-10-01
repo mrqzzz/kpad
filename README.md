@@ -43,12 +43,13 @@ Kpad is still work-in-progress, although it is pretty stable and quite fast.
 - It also supports wide characters (2x width on the terminal).
 - It even runs on my phone.
 
-![Screenshot](res/phone.jpg)
-(using the kubeconfig of my remote cluster)
+<img src="res/phone.jpg" width=50% height=50% />
+(using kpad from termux, editing a deployment on my remote cluster, with the remote kubeconfig)
 
-There could be bugs, and you are welcome to contribute with fixes,enhancements,features,etc.
 
 ## building the kpad binary
+
+There could be bugs, and you are welcome to contribute with fixes,enhancements,features,etc.
 
 **Requirement**
 - Download and install Go https://go.dev/doc/install  (Mac/Win/Linux)
