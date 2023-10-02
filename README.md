@@ -61,7 +61,7 @@ There could be bugs, and you are welcome to contribute with fixes,enhancements,f
 
 The executable will be created in that directory.
 
-
+You can download the kpad binary for Ubuntu here : https://github.com/mrqzzz/kpad/actions/runs/6377365694
 
 
 ## missing/TODO features
