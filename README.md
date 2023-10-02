@@ -61,7 +61,7 @@ There could be bugs, and you are welcome to contribute with fixes,enhancements,f
 
 The executable will be created in that directory.
 
-You can also download the latest **kpad** executable for Ubuntu : https://github.com/mrqzzz/kpad/actions/runs/6369516146
+
 
 
 ## missing/TODO features
