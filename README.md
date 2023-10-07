@@ -16,7 +16,7 @@ If you work using the plain "kubectl" CLI from your console, then kpad should wo
 
 Behind the scenes, kpad calls "kubectl explain" to populate the auto-complete list, so it is also aware of your custom kubernetes objects in your cluster, and provides autocompletion for them.
 
-If in your cluster you use something different from the plain "kubectl" CLI command, you can configure if in kpad launching `kpad -c` and change the configuration there.
+If in your cluster you use something different from the plain "kubectl" CLI command, you can configure it in kpad launching `kpad -c` and change the configuration there.
 
 For example if you use "MicroK8s", then launch `kpad -c` and change like this:
 ```
