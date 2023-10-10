@@ -6,6 +6,8 @@ Kpad is a simple multiplatform terminal editor born to edit kubernetes declarati
 
 It has **syntax highlighting** and provides a handy **auto-complete** that pops up a list of possible context-aware fields at the cursor position.
 
+To show the auto-complete list, press **CTRL+SPACE on Linux/Mac** or press **CTRL+K on Windows** 
+
 ![Screenshot](res/preview.gif)
 
 
